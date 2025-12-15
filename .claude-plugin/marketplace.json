@@ -1,0 +1,50 @@
+{
+  "name": "sdk-bridge-marketplace",
+  "owner": {
+    "name": "flight505",
+    "url": "https://github.com/flight505"
+  },
+  "metadata": {
+    "description": "Bridge Claude Code CLI with Agent SDK for long-running autonomous development tasks",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "sdk-bridge",
+      "source": "./plugins/sdk-bridge",
+      "description": "Bridge CLI and Agent SDK for long-running tasks with autonomous multi-session development, progress tracking, and graceful handoff/resume workflows",
+      "version": "1.0.0",
+      "author": {
+        "name": "flight505",
+        "url": "https://github.com/flight505"
+      },
+      "repository": "https://github.com/flight505/sdk-bridge-marketplace",
+      "license": "MIT",
+      "keywords": [
+        "agent-sdk",
+        "automation",
+        "long-running",
+        "harness",
+        "handoff",
+        "autonomous",
+        "multi-session"
+      ],
+      "category": "workflows",
+      "strict": false,
+      "commands": [
+        "./commands/init.md",
+        "./commands/handoff.md",
+        "./commands/status.md",
+        "./commands/resume.md",
+        "./commands/cancel.md"
+      ],
+      "agents": [
+        "./agents/handoff-validator.md",
+        "./agents/completion-reviewer.md"
+      ],
+      "skills": [
+        "./skills/sdk-bridge-patterns"
+      ]
+    }
+  ]
+}

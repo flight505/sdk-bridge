@@ -1,0 +1,11 @@
+{
+  "name": "sdk-bridge",
+  "version": "1.0.0",
+  "description": "Bridge CLI and Agent SDK for long-running autonomous tasks. Seamlessly handoff work to SDK agents and resume in CLI.",
+  "author": {
+    "name": "Jesper",
+    "email": "jesper@example.com"
+  },
+  "keywords": ["agent-sdk", "automation", "long-running", "harness", "handoff"],
+  "homepage": "https://github.com/your-org/sdk-bridge"
+}
