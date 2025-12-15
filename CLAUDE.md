@@ -10,6 +10,8 @@ This is a **Claude Code plugin marketplace** containing the `sdk-bridge` plugin.
 
 **The Problem We Solved**: Manually placing plugins in `~/.claude/plugins/` doesn't work. Claude Code uses an automatic plugin management system that only recognizes plugins installed through its marketplace mechanism.
 
+**CRITICAL: Command Registration Requirements**: Commands must have the `allowed-tools` field in their YAML frontmatter or they will not appear in Claude Code CLI. Without this field, commands exist in the cache but are not registered in the slash command system.
+
 **How Plugin Discovery Actually Works**:
 
 1. **Marketplace Registration**: Claude Code reads from `~/.claude/plugins/known_marketplaces.json` and `~/.claude/plugins/config.json`
@@ -274,6 +276,7 @@ Command files follow this pattern:
 ---
 description: "Short description"
 argument-hint: "[optional]"
+allowed-tools: ["Bash", "Read", "Task", "TodoWrite"]
 ---
 
 # Command Title
@@ -285,6 +288,8 @@ Use Bash tool with ${CLAUDE_PLUGIN_ROOT}/scripts/... for scripts.
 
 Format output with proper success/error messages.
 ```
+
+**CRITICAL**: The `allowed-tools` field is **required** for commands to be registered. Without it, commands will not appear in Claude Code CLI even if all other configuration is correct.
 
 **Best Practices**:
 - Use Task tool for agent invocation
