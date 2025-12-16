@@ -30,7 +30,7 @@
         "multi-session"
       ],
       "category": "workflows",
-      "strict": false,
+      "strict": true,
       "commands": [
         "./commands/init.md",
         "./commands/handoff.md",
