@@ -33,6 +33,7 @@
       "strict": true,
       "commands": [
         "./commands/init.md",
+        "./commands/lra-setup.md",
         "./commands/handoff.md",
         "./commands/status.md",
         "./commands/resume.md",

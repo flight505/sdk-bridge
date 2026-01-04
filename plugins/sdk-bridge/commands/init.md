@@ -19,7 +19,7 @@ if [ ! -f ~/.claude/skills/long-running-agent/harness/autonomous_agent.py ]; the
   echo ""
   echo "The long-running-agent harness is required but not installed."
   echo ""
-  echo "To install, run: /user:lra-setup"
+  echo "To install, run: /sdk-bridge:lra-setup"
   echo ""
   echo "This will set up the autonomous agent harness that sdk-bridge uses."
   exit 1
