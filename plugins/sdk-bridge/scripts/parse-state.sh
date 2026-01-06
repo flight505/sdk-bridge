@@ -55,7 +55,13 @@ case "$STATE_FILE" in
     TOTAL=$(jq 'length' "$STATE_FILE")
     PASSING=$(jq '[.[] | select(.passes==true)] | length' "$STATE_FILE")
     REMAINING=$((TOTAL - PASSING))
-    PCT=$((PASSING * 100 / TOTAL))
+
+    # Avoid division by zero
+    if [ "$TOTAL" -gt 0 ]; then
+      PCT=$((PASSING * 100 / TOTAL))
+    else
+      PCT=0
+    fi
 
     echo "Total features: $TOTAL"
     echo "Passing: $PASSING ($PCT%)"

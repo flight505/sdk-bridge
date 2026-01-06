@@ -16,12 +16,13 @@ mkdir -p .claude
 # Read configuration from .claude/sdk-bridge.local.md
 if [ -f ".claude/sdk-bridge.local.md" ]; then
   FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' .claude/sdk-bridge.local.md)
-  MODEL=$(echo "$FRONTMATTER" | grep '^model:' | sed 's/model: *//' || echo "claude-sonnet-4-5-20250929")
-  MAX_SESSIONS=$(echo "$FRONTMATTER" | grep '^max_sessions:' | sed 's/max_sessions: *//' || echo "20")
-else
-  MODEL="claude-sonnet-4-5-20250929"
-  MAX_SESSIONS=20
+  MODEL=$(echo "$FRONTMATTER" | grep '^model:' | sed 's/model: *//')
+  MAX_SESSIONS=$(echo "$FRONTMATTER" | grep '^max_sessions:' | sed 's/max_sessions: *//')
 fi
+
+# Apply defaults if values are empty
+MODEL="${MODEL:-claude-sonnet-4-5-20250929}"
+MAX_SESSIONS="${MAX_SESSIONS:-20}"
 
 # Calculate max iterations (sessions - reserve)
 RESERVE_SESSIONS=2

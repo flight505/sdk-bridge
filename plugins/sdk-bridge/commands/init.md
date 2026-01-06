@@ -27,19 +27,24 @@ fi
 
 echo "✅ Harness found at ~/.claude/skills/long-running-agent/harness/autonomous_agent.py"
 
-# Check SDK installed
-if ! python3 -c "import claude_agent_sdk" 2>/dev/null; then
-  echo "❌ ERROR: claude-agent-sdk not installed"
+# Check venv exists
+VENV_PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
+if [ ! -f "$VENV_PYTHON" ]; then
+  echo "❌ ERROR: SDK virtual environment not found"
   echo ""
-  echo "Install with:"
-  echo "  pip install claude-agent-sdk"
-  echo ""
-  echo "Also requires:"
-  echo "  npm install -g @anthropic-ai/claude-code"
+  echo "Run /sdk-bridge:lra-setup to install the harness and SDK"
   exit 1
 fi
 
-echo "✅ Claude Agent SDK installed"
+# Check SDK installed in venv
+if ! "$VENV_PYTHON" -c "import claude_agent_sdk" 2>/dev/null; then
+  echo "❌ ERROR: claude-agent-sdk not installed in venv"
+  echo ""
+  echo "Run /sdk-bridge:lra-setup to reinstall"
+  exit 1
+fi
+
+echo "✅ Claude Agent SDK installed (in venv)"
 
 # Check git
 if ! command -v git &> /dev/null; then

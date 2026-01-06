@@ -18,9 +18,9 @@ if [ -f ".claude/sdk-bridge.pid" ]; then
   fi
 fi
 
-# Count sessions from log
+# Count sessions from log (matches "--- Session X/Y ---" pattern)
 if [ -f ".claude/sdk-bridge.log" ]; then
-  SESSION_COUNT=$(grep -c "^# Iteration" .claude/sdk-bridge.log 2>/dev/null || echo 0)
+  SESSION_COUNT=$(grep -c "Session [0-9]*/[0-9]*" .claude/sdk-bridge.log 2>/dev/null || echo 0)
 else
   SESSION_COUNT=0
 fi
@@ -48,8 +48,8 @@ mv "$TEMP_FILE" .claude/handoff-context.json
 
 # Check for completion patterns in log
 if [ -f ".claude/sdk-bridge.log" ]; then
-  # Check for "all features passing" message
-  if grep -q "All features passing\|all.*features.*complete" .claude/sdk-bridge.log 2>/dev/null; then
+  # Check for "all features completed" message (matches autonomous_agent.py output)
+  if grep -q "All features completed\|all features passing" .claude/sdk-bridge.log 2>/dev/null; then
     if [ ! -f ".claude/sdk_complete.json" ]; then
       # Create completion signal
       cat > .claude/sdk_complete.json << EOF
@@ -71,8 +71,8 @@ EOF
     fi
   fi
 
-  # Check for max iterations reached
-  if grep -q "Reached max iterations\|Maximum.*sessions.*reached" .claude/sdk-bridge.log 2>/dev/null; then
+  # Check for max iterations reached (matches autonomous_agent.py output)
+  if grep -q "Reached maximum iterations\|max iterations reached" .claude/sdk-bridge.log 2>/dev/null; then
     if [ ! -f ".claude/sdk_complete.json" ]; then
       cat > .claude/sdk_complete.json << EOF
 {

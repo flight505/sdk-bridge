@@ -25,19 +25,40 @@ echo "✅ Installed harness to ~/.claude/skills/long-running-agent/harness/auton
 ## Step 3: Create Virtual Environment and Install SDK
 
 ```bash
-if [ ! -d ~/.claude/skills/long-running-agent/.venv ]; then
+VENV_DIR="$HOME/.claude/skills/long-running-agent/.venv"
+
+if [ ! -d "$VENV_DIR" ]; then
   echo "Creating virtual environment..."
-  uv venv ~/.claude/skills/long-running-agent/.venv
-  echo "✅ Created venv at ~/.claude/skills/long-running-agent/.venv"
+
+  # Try uv first (faster), fall back to python3 -m venv
+  if command -v uv &> /dev/null; then
+    uv venv "$VENV_DIR"
+    echo "✅ Created venv using uv"
+  else
+    python3 -m venv "$VENV_DIR"
+    echo "✅ Created venv using python3 -m venv"
+  fi
 else
   echo "✅ Virtual environment already exists"
 fi
 ```
 
 ```bash
+VENV_DIR="$HOME/.claude/skills/long-running-agent/.venv"
 echo "Installing Claude Agent SDK..."
-source ~/.claude/skills/long-running-agent/.venv/bin/activate
-uv pip install claude-agent-sdk
+
+# Activate venv using portable syntax
+. "$VENV_DIR/bin/activate"
+
+# Try uv pip first, fall back to pip
+if command -v uv &> /dev/null; then
+  uv pip install claude-agent-sdk
+  echo "✅ Installed using uv pip"
+else
+  pip install claude-agent-sdk
+  echo "✅ Installed using pip"
+fi
+
 deactivate
 echo "✅ Claude Agent SDK installed"
 ```

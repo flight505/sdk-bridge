@@ -194,7 +194,7 @@ if [ ! -f "$HARNESS" ]; then
   echo "The harness is required to run the SDK agent."
   echo ""
   echo "Install with:"
-  echo "  /user:lra-setup"
+  echo "  /sdk-bridge:lra-setup"
   exit 1
 fi
 
@@ -203,21 +203,30 @@ echo "✅ Harness accessible at ~/.claude/skills/long-running-agent/harness/"
 
 ### 7. SDK Installation (CRITICAL)
 
-Verify claude-agent-sdk is installed:
+Verify claude-agent-sdk is installed in the venv:
 
 ```bash
-if ! python3 -c "import claude_agent_sdk" 2>/dev/null; then
-  echo "❌ CRITICAL: claude-agent-sdk not installed"
+VENV_PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
+
+if [ ! -f "$VENV_PYTHON" ]; then
+  echo "❌ CRITICAL: SDK virtual environment not found"
+  echo ""
+  echo "Expected location:"
+  echo "  $HOME/.claude/skills/long-running-agent/.venv/"
   echo ""
   echo "Install with:"
-  echo "  pip install claude-agent-sdk"
-  echo ""
-  echo "Also ensure Claude Code CLI is installed:"
-  echo "  npm install -g @anthropic-ai/claude-code"
+  echo "  /sdk-bridge:lra-setup"
   exit 1
 fi
 
-echo "✅ Claude Agent SDK installed"
+if ! "$VENV_PYTHON" -c "import claude_agent_sdk" 2>/dev/null; then
+  echo "❌ CRITICAL: claude-agent-sdk not installed in venv"
+  echo ""
+  echo "Run /sdk-bridge:lra-setup to reinstall"
+  exit 1
+fi
+
+echo "✅ Claude Agent SDK installed (in venv)"
 ```
 
 ### 8. API Key (CRITICAL)
