@@ -1,0 +1,17 @@
+[
+  {
+    "description": "Create a hello.py script that prints 'Hello from SDK Bridge!'",
+    "test": "python hello.py outputs the expected message",
+    "passes": false
+  },
+  {
+    "description": "Create a utils.py with a function add(a, b) that returns the sum",
+    "test": "python -c 'from utils import add; assert add(2,3)==5'",
+    "passes": false
+  },
+  {
+    "description": "Create a README-test.md documenting the test scripts",
+    "test": "README-test.md exists and contains descriptions of hello.py and utils.py",
+    "passes": false
+  }
+]
