@@ -5,6 +5,7 @@ set -euo pipefail
 
 # Configuration
 HARNESS="$HOME/.claude/skills/long-running-agent/harness/autonomous_agent.py"
+PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
 PROJECT_DIR="${1:-.}"
 LOG_FILE=".claude/sdk-bridge.log"
 PID_FILE=".claude/sdk-bridge.pid"
@@ -40,7 +41,7 @@ echo ""
 
 # Launch harness in background
 # Use nohup to detach from terminal, redirect output to log file
-nohup python3 "$HARNESS" \
+nohup "$PYTHON" "$HARNESS" \
   --project-dir "$PROJECT_DIR" \
   --model "$MODEL" \
   --max-iterations "$MAX_ITERATIONS" \
