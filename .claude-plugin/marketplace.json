@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Bridge Claude Code CLI with Agent SDK for long-running autonomous development tasks",
-    "version": "1.2.0"
+    "version": "1.2.1"
   },
   "plugins": [
     {
       "name": "sdk-bridge",
       "source": "./plugins/sdk-bridge",
       "description": "Bridge CLI and Agent SDK for long-running tasks with autonomous multi-session development, progress tracking, and graceful handoff/resume workflows",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "author": {
         "name": "flight505",
         "url": "https://github.com/flight505"
