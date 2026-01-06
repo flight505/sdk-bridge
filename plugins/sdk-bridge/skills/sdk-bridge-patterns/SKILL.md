@@ -2,7 +2,7 @@
 name: SDK Bridge Patterns
 description: |
   Use when user wants to "hand off to SDK", "run autonomous agent", "bridge CLI and SDK", "long-running tasks", "autonomous development", or mentions SDK bridge workflows. Provides comprehensive patterns for hybrid CLI/SDK development with the Claude Agent SDK.
-version: 1.0.0
+version: 1.4.0
 ---
 
 # SDK Bridge Patterns
@@ -170,6 +170,7 @@ project/
     ├── handoff-context.json   # Handoff tracking (plugin writes)
     ├── sdk-bridge.log         # SDK output (harness writes)
     ├── sdk-bridge.pid         # Process ID (plugin writes)
+    ├── sdk-checkpoint.json    # Crash recovery state (harness writes) [v1.4.0]
     └── sdk_complete.json      # Completion signal (harness/plugin writes)
 ```
 
@@ -185,6 +186,8 @@ max_sessions: 20
 reserve_sessions: 2
 progress_stall_threshold: 3
 auto_handoff_after_plan: false
+log_level: INFO                    # DEBUG, INFO, WARNING, ERROR [v1.4.0]
+webhook_url:                       # Optional webhook for notifications [v1.4.0]
 ---
 
 # SDK Bridge Configuration
@@ -215,6 +218,17 @@ auto_handoff_after_plan: false
 **`auto_handoff_after_plan`**: Auto-launch after /plan (default: false)
 - `true`: Immediately hand off after plan creation
 - `false`: Manual handoff with `/sdk-bridge:handoff`
+
+**`log_level`** [v1.4.0]: Logging verbosity (default: INFO)
+- `DEBUG`: Verbose output including API auth method, agent responses
+- `INFO`: Standard progress messages
+- `WARNING`: Only warnings and errors
+- `ERROR`: Only error messages
+
+**`webhook_url`** [v1.4.0]: Optional webhook for notifications
+- Receives POST requests with JSON payloads
+- Events: `feature_complete`, `error`, `completion`
+- Leave empty to disable
 
 ## Common Patterns
 
@@ -578,6 +592,207 @@ model: claude-opus-4-5-20251101
 model: claude-sonnet-4-5-20250929
 /sdk-bridge:handoff
 # ... completes remaining simple features ...
+```
+
+## Version 1.4.0 Features
+
+SDK Bridge 1.4.0 introduces several production-quality improvements to the autonomous agent harness.
+
+### Retry Logic with Exponential Backoff
+
+The harness now automatically retries failed sessions with exponential backoff delays:
+
+- **3 retry attempts** per session on transient errors
+- **Exponential backoff**: 1s, 2s, 4s delays between retries
+- Only retries on exceptions/errors, not on feature implementation failures
+- Prevents API rate limiting and handles temporary network issues
+
+```
+[2025-01-06 10:30:00] [WARNING] Session attempt 1 failed with error: Connection timeout
+[2025-01-06 10:30:01] [INFO] Retry attempt 2/3 after 1s delay
+[2025-01-06 10:30:03] [INFO] Retry attempt 3/3 after 2s delay
+```
+
+### Progress Persistence Across Crashes
+
+State is now saved to `.claude/sdk-checkpoint.json` after each feature, enabling recovery after crashes:
+
+**Checkpoint file format**:
+```json
+{
+  "current_session": 5,
+  "features_completed": 4,
+  "consecutive_failures": 0,
+  "current_feature": "User authentication flow",
+  "project_dir": "/path/to/project",
+  "model": "claude-sonnet-4-5-20250929",
+  "max_iterations": 20,
+  "checkpoint_time": "2025-01-06T10:30:00Z"
+}
+```
+
+**Recovery behavior**:
+- On restart, harness checks for existing checkpoint
+- Resumes from last saved session state
+- Checkpoint is cleared on successful completion
+- Uses atomic writes (temp file + rename) to prevent corruption
+
+### Structured Logging
+
+Replaced print-based logging with Python's `logging` module:
+
+**Log levels**: DEBUG, INFO, WARNING, ERROR
+
+**Configuration**:
+```yaml
+# .claude/sdk-bridge.local.md
+---
+log_level: DEBUG  # or INFO (default), WARNING, ERROR
+---
+```
+
+**Or via command line**:
+```bash
+python autonomous_agent.py --project-dir . --log-level DEBUG
+```
+
+**Log format**:
+```
+[2025-01-06 10:30:00] [INFO] Starting autonomous agent in /project
+[2025-01-06 10:30:00] [INFO] Model: claude-sonnet-4-5-20250929, Max iterations: 20
+[2025-01-06 10:30:01] [DEBUG] Using auth: CLAUDE_CODE_OAUTH_TOKEN
+[2025-01-06 10:30:05] [INFO] Feature completed successfully: User login
+[2025-01-06 10:30:05] [WARNING] Webhook failed: Connection refused
+```
+
+Logs are written to both console and `.claude/sdk-bridge.log`.
+
+### Webhook Notifications
+
+Optional webhook support for completion, error, and progress notifications:
+
+**Configuration**:
+```yaml
+# .claude/sdk-bridge.local.md
+---
+webhook_url: https://your-server.com/webhook
+---
+```
+
+**Webhook events**:
+
+1. **Feature completion**:
+```json
+{
+  "event": "feature_complete",
+  "timestamp": "2025-01-06T10:30:00Z",
+  "data": {
+    "feature": "User authentication flow",
+    "session": 5
+  }
+}
+```
+
+2. **Error notification**:
+```json
+{
+  "event": "error",
+  "timestamp": "2025-01-06T10:30:00Z",
+  "data": {
+    "error": "Stall detected",
+    "feature": "Complex feature"
+  }
+}
+```
+
+3. **Completion notification**:
+```json
+{
+  "event": "completion",
+  "timestamp": "2025-01-06T10:30:00Z",
+  "data": {
+    "reason": "success",
+    "features_completed": 45,
+    "total_features": 50
+  }
+}
+```
+
+**Use cases**:
+- Slack/Discord notifications
+- CI/CD pipeline triggers
+- Monitoring dashboards
+- Email alerts via webhook-to-email services
+
+### Feature Priority Ordering
+
+Control execution order with the `priority` field in `feature_list.json`:
+
+**Feature list with priorities**:
+```json
+[
+  {
+    "description": "Set up database schema",
+    "test": "migrations run successfully",
+    "passes": false,
+    "priority": 100
+  },
+  {
+    "description": "User authentication",
+    "test": "login/logout works",
+    "passes": false,
+    "priority": 90
+  },
+  {
+    "description": "Nice-to-have feature",
+    "test": "works as expected",
+    "passes": false,
+    "priority": 10
+  },
+  {
+    "description": "Default priority feature",
+    "test": "works correctly",
+    "passes": false
+  }
+]
+```
+
+**Priority behavior**:
+- Higher numbers execute first (100 before 90 before 10)
+- Default priority is 0 if not specified
+- Features with same priority preserve original order
+- Completed features are skipped regardless of priority
+
+**Best practices**:
+- Use 100 for critical infrastructure (DB, auth)
+- Use 50 for core features
+- Use 10 for nice-to-haves
+- Use 0 (default) for unordered features
+
+### New State Files
+
+Version 1.4.0 adds:
+
+| File | Purpose | Managed By |
+|------|---------|------------|
+| `.claude/sdk-checkpoint.json` | Crash recovery state | Harness |
+
+### Configuration Reference (1.4.0)
+
+New configuration options in `.claude/sdk-bridge.local.md`:
+
+```yaml
+---
+enabled: true
+model: claude-sonnet-4-5-20250929
+max_sessions: 20
+reserve_sessions: 2
+progress_stall_threshold: 3
+auto_handoff_after_plan: false
+# New in 1.4.0:
+log_level: INFO           # DEBUG, INFO, WARNING, ERROR
+webhook_url: https://...  # Optional webhook endpoint
+---
 ```
 
 ## Resources

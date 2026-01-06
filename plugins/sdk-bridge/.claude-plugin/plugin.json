@@ -1,6 +1,6 @@
 {
   "name": "sdk-bridge",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Bridge CLI and Agent SDK for long-running autonomous tasks. Seamlessly handoff work to SDK agents and resume in CLI.",
   "author": {
     "name": "Jesper",
