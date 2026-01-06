@@ -4,25 +4,36 @@ Bridge Claude Code CLI and Agent SDK for seamless hybrid workflows. Hand off lon
 
 ## Overview
 
-The SDK Bridge plugin transforms the existing long-running-agent harness into a CLI-integrated workflow:
+The SDK Bridge plugin provides a **self-contained** autonomous agent harness with CLI-integrated workflow:
 
-1. **Plan interactively** in CLI (`/plan` creates feature_list.json)
-2. **Hand off to SDK** (`/sdk-bridge:handoff` launches autonomous agent)
-3. **Monitor progress** (`/sdk-bridge:status` checks feature completion)
-4. **Resume in CLI** (`/sdk-bridge:resume` reviews SDK work and continues)
+1. **Setup harness** (`/sdk-bridge:lra-setup` - first time only)
+2. **Plan interactively** in CLI (`/plan` creates feature_list.json)
+3. **Hand off to SDK** (`/sdk-bridge:handoff` launches autonomous agent)
+4. **Monitor progress** (`/sdk-bridge:status` checks feature completion)
+5. **Resume in CLI** (`/sdk-bridge:resume` reviews SDK work and continues)
 
 ## Installation
 
-The plugin is installed at: `~/.claude/plugins/sdk-bridge/`
+The plugin is installed at: `~/.claude/plugins/cache/sdk-bridge-marketplace/sdk-bridge/`
 
 Prerequisites:
-- Claude Code CLI: `npm install -g @anthropic-ai/claude-code`
+- Claude Code CLI
+- Python 3.8+
 - Claude Agent SDK: `pip install claude-agent-sdk`
-- Long-running-agent harness: Run `/user:lra-setup` if not already installed
+
+> **Self-Contained**: The plugin bundles its own `autonomous_agent.py` harness - no external dependencies required.
 
 ## Quick Start
 
-### 1. Initialize Your Project
+### 1. Setup Harness (First Time Only)
+
+```bash
+/sdk-bridge:lra-setup
+```
+
+Installs the bundled `autonomous_agent.py` to `~/.claude/skills/long-running-agent/harness/`.
+
+### 2. Initialize Your Project
 
 ```bash
 cd my-project
@@ -31,7 +42,7 @@ cd my-project
 
 This creates `.claude/sdk-bridge.local.md` with configuration defaults.
 
-### 2. Create a Plan
+### 3. Create a Plan
 
 ```bash
 /plan
@@ -39,7 +50,7 @@ This creates `.claude/sdk-bridge.local.md` with configuration defaults.
 
 This creates `feature_list.json` with features to implement.
 
-### 3. Hand Off to SDK
+### 4. Hand Off to SDK
 
 ```bash
 /sdk-bridge:handoff
@@ -47,7 +58,7 @@ This creates `feature_list.json` with features to implement.
 
 The validator checks prerequisites, then launches the SDK agent in background.
 
-### 4. Monitor Progress
+### 5. Monitor Progress
 
 ```bash
 /sdk-bridge:status
@@ -55,7 +66,7 @@ The validator checks prerequisites, then launches the SDK agent in background.
 
 Check feature completion, session count, and recent activity.
 
-### 5. Resume When Complete
+### 6. Resume When Complete
 
 ```bash
 /sdk-bridge:resume
@@ -65,10 +76,12 @@ Review SDK work, see completion report, continue in CLI.
 
 ## Commands
 
+- `/sdk-bridge:lra-setup` - Install bundled harness (first-time setup)
 - `/sdk-bridge:init` - Initialize project for SDK bridge
 - `/sdk-bridge:handoff` - Hand off work to SDK agent
 - `/sdk-bridge:status` - Check SDK agent progress
 - `/sdk-bridge:resume` - Resume CLI after SDK completes
+- `/sdk-bridge:cancel` - Stop running SDK agent
 
 ## Configuration
 
@@ -102,12 +115,13 @@ auto_handoff_after_plan: false
 
 ## How It Works
 
-The SDK Bridge plugin wraps the existing `autonomous_agent.py` harness with CLI-friendly commands:
+The SDK Bridge plugin bundles a self-contained `autonomous_agent.py` harness with CLI-friendly commands:
 
-1. **Handoff**: Validator checks prerequisites → Launch script starts harness in background
-2. **SDK runs**: Implements features one per session, commits after each, logs progress
-3. **Completion**: SDK creates `.claude/sdk_complete.json` when done
-4. **Resume**: Review completion report, continue in CLI
+1. **Setup**: `/sdk-bridge:lra-setup` installs bundled harness to `~/.claude/skills/`
+2. **Handoff**: Validator checks prerequisites → Launch script starts harness in background
+3. **SDK runs**: Implements features one per session, commits after each, logs progress
+4. **Completion**: SDK creates `.claude/sdk_complete.json` when done
+5. **Resume**: Review completion report, continue in CLI
 
 ## Workflow Example
 
@@ -141,17 +155,23 @@ $ /sdk-bridge:resume
 ## Architecture
 
 ```
-~/.claude/plugins/sdk-bridge/
+~/.claude/plugins/cache/sdk-bridge-marketplace/sdk-bridge/
 ├── .claude-plugin/plugin.json      # Manifest
 ├── commands/                        # Slash commands
+│   ├── lra-setup.md                 # Installs bundled harness
 │   ├── init.md
 │   ├── handoff.md
 │   ├── status.md
-│   └── resume.md
+│   ├── resume.md
+│   └── cancel.md
 ├── agents/                          # Validation agents
-│   └── handoff-validator.md
+│   ├── handoff-validator.md
+│   └── completion-reviewer.md
 └── scripts/                         # Helper scripts
-    └── launch-harness.sh
+    ├── autonomous_agent.py          # Bundled harness (self-contained)
+    ├── launch-harness.sh
+    ├── monitor-progress.sh
+    └── parse-state.sh
 ```
 
 ## Troubleshooting

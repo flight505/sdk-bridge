@@ -102,10 +102,10 @@ sdk-bridge-marketplace/
 │   └── sdk-bridge/               # The actual plugin
 │       ├── .claude-plugin/
 │       │   └── plugin.json       # Plugin manifest
-│       ├── commands/             # 5 slash commands (init, handoff, status, resume, cancel)
+│       ├── commands/             # 6 slash commands (lra-setup, init, handoff, status, resume, cancel)
 │       ├── agents/               # 2 validation agents (handoff-validator, completion-reviewer)
 │       ├── hooks/                # SessionStart and Stop event handlers
-│       ├── scripts/              # Bash utilities (launch-harness.sh, monitor-progress.sh, parse-state.sh)
+│       ├── scripts/              # Bundled harness + utilities (autonomous_agent.py, launch-harness.sh, etc.)
 │       └── skills/               # Comprehensive documentation (SKILL.md + references + examples)
 ├── .gitignore                    # Git ignore patterns
 └── README.md                     # User-facing marketplace documentation
@@ -154,8 +154,14 @@ Claude Code auto-discovers components from standard directories:
 - `completion-reviewer.md`: Post-completion analysis and reporting
 - Format similar to commands but with agent-specific frontmatter
 
-**Scripts** (`scripts/*.sh`):
-- `launch-harness.sh`: Launches `~/.claude/skills/long-running-agent/harness/autonomous_agent.py` with nohup
+**Scripts** (`scripts/`):
+- `autonomous_agent.py`: **Bundled harness** - self-contained Python script that loops through features
+  - Uses Claude Agent SDK for programmatic Claude control
+  - Reads `feature_list.json`, implements features one by one
+  - Updates `passes` field, commits after each feature
+  - Creates `sdk_complete.json` on completion
+  - Installed to `~/.claude/skills/long-running-agent/harness/` via `/sdk-bridge:lra-setup`
+- `launch-harness.sh`: Launches the harness with nohup
   - Reads `.claude/sdk-bridge.local.md` for configuration
   - Parses YAML frontmatter to extract model, max_sessions
   - Calculates max_iterations = max_sessions - reserve_sessions
@@ -203,13 +209,14 @@ The plugin uses file-based state sharing between CLI and SDK:
 - `.claude/sdk-bridge.log`: SDK stdout/stderr (tail for recent activity)
 - `.claude/sdk_complete.json`: Completion signal from SDK or monitor
 
-**Harness-Managed Files** (from long-running-agent skill):
+**Harness-Managed Files** (from bundled autonomous_agent.py):
 - `feature_list.json`: Source of truth for work (only `passes` field updated by SDK)
 - `claude-progress.txt`: Session-to-session memory log (SDK appends after each session)
 - `CLAUDE.md`: Session protocol and project rules (project-specific, different from this file!)
 - `init.sh`: Environment bootstrap script (executed before each SDK session)
 
 **State File Lifecycle**:
+0. User runs `/sdk-bridge:lra-setup` (first time only) → installs harness to `~/.claude/skills/`
 1. User runs `/sdk-bridge:init` → creates `sdk-bridge.local.md`
 2. User runs `/sdk-bridge:handoff` → creates `handoff-context.json`, `sdk-bridge.pid`, `sdk-bridge.log`
 3. SDK runs → updates `feature_list.json`, appends to `claude-progress.txt`
@@ -218,9 +225,10 @@ The plugin uses file-based state sharing between CLI and SDK:
 
 ### Integration Points
 
-**Harness Dependency**:
-- Requires `~/.claude/skills/long-running-agent/harness/autonomous_agent.py`
-- Plugin wraps existing harness, doesn't reimplement
+**Self-Contained Harness**:
+- Plugin bundles its own `autonomous_agent.py` in `scripts/`
+- `/sdk-bridge:lra-setup` installs it to `~/.claude/skills/long-running-agent/harness/`
+- No external dependencies - plugin is fully self-contained
 - `launch-harness.sh` translates plugin config to harness CLI args:
   ```bash
   nohup python3 "$HARNESS" \

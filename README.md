@@ -31,7 +31,15 @@ This marketplace provides the **sdk-bridge** plugin, which enables seamless hand
 
 ## Quick Start
 
-### 1. Create a Plan
+### 1. Setup Harness (First Time Only)
+
+```bash
+/sdk-bridge:lra-setup
+# Installs bundled autonomous_agent.py to ~/.claude/skills/
+# Verifies claude-agent-sdk is installed
+```
+
+### 2. Create a Plan
 
 ```bash
 /plan
@@ -39,14 +47,14 @@ This marketplace provides the **sdk-bridge** plugin, which enables seamless hand
 # Result: feature_list.json with all features
 ```
 
-### 2. Initialize SDK Bridge
+### 3. Initialize SDK Bridge
 
 ```bash
 /sdk-bridge:init
 # Creates .claude/sdk-bridge.local.md configuration
 ```
 
-### 3. Hand Off to SDK
+### 4. Hand Off to SDK
 
 ```bash
 /sdk-bridge:handoff
@@ -55,7 +63,7 @@ This marketplace provides the **sdk-bridge** plugin, which enables seamless hand
 # You can close CLI - agent continues working
 ```
 
-### 4. Monitor Progress (Optional)
+### 5. Monitor Progress (Optional)
 
 ```bash
 /sdk-bridge:status
@@ -63,7 +71,7 @@ This marketplace provides the **sdk-bridge** plugin, which enables seamless hand
 # View session count, feature completion
 ```
 
-### 5. Resume When Complete
+### 6. Resume When Complete
 
 ```bash
 /sdk-bridge:resume
@@ -73,6 +81,7 @@ This marketplace provides the **sdk-bridge** plugin, which enables seamless hand
 
 ## Commands
 
+- `/sdk-bridge:lra-setup` - Install bundled harness (first-time setup)
 - `/sdk-bridge:init` - Initialize project for SDK bridge
 - `/sdk-bridge:handoff` - Launch autonomous SDK agent
 - `/sdk-bridge:status` - Monitor progress
@@ -113,6 +122,7 @@ auto_handoff_after_plan: false             # Manual handoff control
 
 Based on [Anthropic's long-running agent pattern](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents):
 
+- **Self-Contained**: Plugin bundles its own `autonomous_agent.py` harness - no external dependencies
 - **Two-Agent Pattern**: Initializer sets up environment, Coding agent implements features
 - **File-Based State**: feature_list.json, claude-progress.txt for session memory
 - **Session Protocol**: CLAUDE.md defines project-specific rules
@@ -131,9 +141,12 @@ The plugin includes comprehensive documentation:
 ## Requirements
 
 - Claude Code CLI
-- Claude Agent SDK (`claude-agent-sdk` Python package)
+- Python 3.8+
+- Claude Agent SDK: `pip install claude-agent-sdk`
 - Git repository (recommended)
 - API authentication (CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY)
+
+> **Note**: The plugin is self-contained and bundles its own harness script. Run `/sdk-bridge:lra-setup` once to install it to your `~/.claude/skills/` directory.
 
 ## Support
 
