@@ -10,6 +10,7 @@ import argparse
 import subprocess
 import time
 import sys
+import asyncio
 from datetime import datetime
 
 def log(message):
@@ -96,14 +97,12 @@ class AutonomousAgent:
         self.signal_completion("max_iterations_reached")
 
     def execute_session(self, feature):
-        # In a real implementation, this would use the Claude Agent SDK
-        # to create an agent and give it the task.
-        # For this marketplace version, we'll assume the environment is set up.
+        # Use the Claude Agent SDK to execute a session
+        return asyncio.run(self._execute_session_async(feature))
 
-        # This is where the actual Agent instantiation would go.
-        # Since we're in a script, we'll use the SDK if available.
+    async def _execute_session_async(self, feature):
         try:
-            from claude_agent_sdk import Agent
+            from claude_agent_sdk import query, ClaudeAgentOptions
 
             # Read protocol
             protocol = ""
@@ -111,15 +110,13 @@ class AutonomousAgent:
                 with open(self.protocol_path, 'r') as f:
                     protocol = f.read()
 
-            # Prefer CLAUDE_CODE_OAUTH_TOKEN over ANTHROPIC_API_KEY
-            api_key = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or os.environ.get("ANTHROPIC_API_KEY")
-            if not api_key:
+            # Check for API authentication
+            if not os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") and not os.environ.get("ANTHROPIC_API_KEY"):
                 log("Error: No API key found. Set CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY")
                 return False
 
             log(f"Using auth: {'CLAUDE_CODE_OAUTH_TOKEN' if os.environ.get('CLAUDE_CODE_OAUTH_TOKEN') else 'ANTHROPIC_API_KEY'}")
-            agent = Agent(model=self.model, api_key=api_key)
-            
+
             prompt = f"""
 I am working on a project in {self.project_dir}.
 The project protocol is defined in CLAUDE.md:
@@ -130,19 +127,26 @@ Description: {feature['description']}
 Test Criteria: {feature.get('test', 'None provided')}
 
 Please implement this feature, ensure it passes its tests, and let me know when you are done.
-Include a brief summary of what you did.
+Include a brief summary of what you did. Say SUCCESS if you completed it successfully.
 """
-            # This is a simplified version of the loop. 
-            # In a real production harness, this would handle tools and multi-turn interaction.
-            # Here we let the Agent SDK handle the heavy lifting.
-            result = agent.run(prompt)
-            
+            options = ClaudeAgentOptions(
+                model=self.model,
+                max_turns=50,
+            )
+
+            result_text = ""
+            async for message in query(prompt=prompt, options=options):
+                if hasattr(message, 'content'):
+                    for block in message.content:
+                        if hasattr(block, 'text'):
+                            result_text += block.text
+                            log(f"Agent: {block.text[:100]}...")
+
             # Analyze result to determine success
-            # For this harness, we look for a signal of completion
-            return "SUCCESS" in result.upper() or "COMPLETED" in result.upper()
-            
-        except ImportError:
-            log("Error: claude-agent-sdk not found. Simulating failure.")
+            return "SUCCESS" in result_text.upper() or "COMPLETED" in result_text.upper()
+
+        except ImportError as e:
+            log(f"Error: claude-agent-sdk import failed: {e}")
             return False
         except Exception as e:
             log(f"Error during agent execution: {str(e)}")
