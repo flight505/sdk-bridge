@@ -99,19 +99,26 @@ class AutonomousAgent:
         # In a real implementation, this would use the Claude Agent SDK
         # to create an agent and give it the task.
         # For this marketplace version, we'll assume the environment is set up.
-        
+
         # This is where the actual Agent instantiation would go.
         # Since we're in a script, we'll use the SDK if available.
         try:
             from claude_agent_sdk import Agent
-            
+
             # Read protocol
             protocol = ""
             if os.path.exists(self.protocol_path):
                 with open(self.protocol_path, 'r') as f:
                     protocol = f.read()
 
-            agent = Agent(model=self.model)
+            # Prefer CLAUDE_CODE_OAUTH_TOKEN over ANTHROPIC_API_KEY
+            api_key = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or os.environ.get("ANTHROPIC_API_KEY")
+            if not api_key:
+                log("Error: No API key found. Set CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY")
+                return False
+
+            log(f"Using auth: {'CLAUDE_CODE_OAUTH_TOKEN' if os.environ.get('CLAUDE_CODE_OAUTH_TOKEN') else 'ANTHROPIC_API_KEY'}")
+            agent = Agent(model=self.model, api_key=api_key)
             
             prompt = f"""
 I am working on a project in {self.project_dir}.
