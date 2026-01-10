@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Bridge Claude Code CLI with Agent SDK for long-running autonomous development tasks",
-    "version": "1.5.0"
+    "version": "1.6.0"
   },
   "plugins": [
     {
       "name": "sdk-bridge",
       "source": "./plugins/sdk-bridge",
-      "description": "Bridge CLI and Agent SDK for long-running tasks with hybrid loops, semantic memory, and cross-project learning (v2.0 Phase 1)",
-      "version": "1.5.0",
+      "description": "Bridge CLI and Agent SDK with adaptive intelligence: hybrid loops, semantic memory, smart model selection, and approval nodes (v2.0 Phase 2)",
+      "version": "1.6.0",
       "author": {
         "name": "flight505",
         "url": "https://github.com/flight505"
@@ -36,6 +36,7 @@
         "./commands/lra-setup.md",
         "./commands/handoff.md",
         "./commands/handoff-v2.md",
+        "./commands/approve.md",
         "./commands/status.md",
         "./commands/resume.md",
         "./commands/cancel.md"
