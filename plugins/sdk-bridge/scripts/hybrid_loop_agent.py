@@ -23,9 +23,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
-# Add semantic memory to path
+# Add semantic memory and Phase 2 modules to path
 sys.path.append(os.path.dirname(__file__))
 from semantic_memory import SemanticMemory, Feature, Solution, ExecutionResult
+from model_selector import AdaptiveModelSelector, ModelPerformanceTracker, SelectionContext
+from approval_system import RiskAssessor, ApprovalQueue, RiskLevel, ImpactAnalysis
 
 
 # Configure logging
@@ -91,13 +93,39 @@ class HybridLoopAgent:
         max_inner_loops: int = 5,
         max_outer_sessions: int = 20,
         log_level: str = "INFO",
-        enable_semantic_memory: bool = True
+        enable_semantic_memory: bool = True,
+        enable_adaptive_models: bool = True,
+        enable_approval_nodes: bool = True
     ):
         self.project_dir = Path(project_dir).resolve()
         self.model = model
         self.max_inner_loops = max_inner_loops
         self.max_outer_sessions = max_outer_sessions
         self.logger = setup_logging(log_level)
+
+        # Phase 2: Adaptive model selection
+        self.enable_adaptive_models = enable_adaptive_models
+        self.model_selector = None
+        self.performance_tracker = None
+        if enable_adaptive_models:
+            try:
+                self.performance_tracker = ModelPerformanceTracker()
+                self.model_selector = AdaptiveModelSelector(self.performance_tracker)
+                self.logger.info("✅ Adaptive model selection enabled")
+            except Exception as e:
+                self.logger.warning(f"⚠️  Adaptive models disabled: {e}")
+
+        # Phase 2: Approval system
+        self.enable_approval_nodes = enable_approval_nodes
+        self.risk_assessor = None
+        self.approval_queue = None
+        if enable_approval_nodes:
+            try:
+                self.risk_assessor = RiskAssessor()
+                self.approval_queue = ApprovalQueue(str(self.project_dir))
+                self.logger.info("✅ Approval nodes enabled")
+            except Exception as e:
+                self.logger.warning(f"⚠️  Approval nodes disabled: {e}")
 
         # State paths
         self.claude_dir = self.project_dir / ".claude"

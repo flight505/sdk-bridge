@@ -1,7 +1,7 @@
 {
   "name": "sdk-bridge",
-  "version": "1.5.0",
-  "description": "Bridge CLI and Agent SDK with hybrid loops, semantic memory, and cross-project learning (v2.0 Phase 1).",
+  "version": "1.6.0",
+  "description": "Bridge CLI and Agent SDK with adaptive intelligence: hybrid loops, semantic memory, smart model selection, and approval nodes (v2.0 Phase 2).",
   "author": {
     "name": "Jesper",
     "email": "jesper@example.com"
