@@ -68,19 +68,27 @@ I'll create `.claude/sdk-bridge.local.md` with sensible defaults:
 ```bash
 cat > .claude/sdk-bridge.local.md << 'EOF'
 ---
+# v1.4.0 Settings
 enabled: true
 model: claude-sonnet-4-5-20250929
 max_sessions: 20
 reserve_sessions: 2
 progress_stall_threshold: 3
 auto_handoff_after_plan: false
+log_level: INFO
+webhook_url:
+
+# v2.0 Settings (Phase 1)
+enable_v2_features: false
+enable_semantic_memory: true
+max_inner_loops: 5
 ---
 
 # SDK Bridge Configuration
 
 This project is configured for SDK bridge workflows.
 
-## Settings Explained
+## v1.4.0 Settings
 
 - **model**: Claude model for SDK sessions
   - `claude-sonnet-4-5-20250929` (default, fast and capable)
@@ -93,6 +101,24 @@ This project is configured for SDK bridge workflows.
 - **progress_stall_threshold**: Stop if no progress for N sessions (default: 3)
 
 - **auto_handoff_after_plan**: Automatically handoff after /plan creates feature_list.json (default: false)
+
+- **log_level**: Logging verbosity (DEBUG, INFO, WARNING, ERROR)
+
+- **webhook_url**: Optional webhook for notifications
+
+## v2.0 Settings (New!)
+
+- **enable_v2_features**: Enable hybrid loops and semantic memory (default: false)
+  - Set to `true` to use SDK Bridge v2.0 features
+  - Requires `/sdk-bridge:handoff-v2` command
+
+- **enable_semantic_memory**: Cross-project learning (default: true)
+  - Learns from past implementations
+  - Suggests solutions based on similar features
+
+- **max_inner_loops**: Same-session retries before starting new session (default: 5)
+  - Ralph Wiggum pattern for self-healing
+  - Reduces API costs for simple fixes
 
 ## Usage
 
