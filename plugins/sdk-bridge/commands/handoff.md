@@ -88,7 +88,9 @@ EOF
 Use Bash tool to launch the agent in background:
 
 ```bash
-HARNESS="$HOME/.claude/skills/long-running-agent/harness/hybrid_loop_agent.py"
+#!/bin/bash
+set -euo pipefail
+
 PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
 PROJECT_DIR="${1:-.}"
 LOG_FILE=".claude/sdk-bridge.log"
@@ -103,16 +105,62 @@ if [ -f ".claude/sdk-bridge.local.md" ]; then
   MAX_INNER=$(echo "$FRONTMATTER" | grep '^max_inner_loops:' | sed 's/max_inner_loops: *//' || echo "5")
   LOG_LEVEL=$(echo "$FRONTMATTER" | grep '^log_level:' | sed 's/log_level: *//' || echo "INFO")
   ENABLE_MEMORY=$(echo "$FRONTMATTER" | grep '^enable_semantic_memory:' | sed 's/enable_semantic_memory: *//' || echo "true")
+  ENABLE_PARALLEL=$(echo "$FRONTMATTER" | grep '^enable_parallel_execution:' | sed 's/enable_parallel_execution: *//' || echo "false")
+  MAX_WORKERS=$(echo "$FRONTMATTER" | grep '^max_parallel_workers:' | sed 's/max_parallel_workers: *//' || echo "3")
 fi
 
 # Calculate max iterations
 MAX_ITERATIONS=$((MAX_SESSIONS - RESERVE_SESSIONS))
 
-# Build command
-CMD="$PYTHON $HARNESS --project-dir $PROJECT_DIR --model $MODEL --max-iterations $MAX_ITERATIONS --max-inner-loops $MAX_INNER --log-level $LOG_LEVEL"
+# Determine execution mode
+EXECUTION_MODE="sequential"
+HARNESS="$HOME/.claude/skills/long-running-agent/harness/hybrid_loop_agent.py"
 
-if [ "$ENABLE_MEMORY" = "false" ]; then
-  CMD="$CMD --disable-semantic-memory"
+if [ "$ENABLE_PARALLEL" = "true" ]; then
+  # Check for execution plan
+  if [ -f ".claude/execution-plan.json" ]; then
+    EXECUTION_MODE="parallel"
+    HARNESS="$HOME/.claude/skills/long-running-agent/harness/parallel_coordinator.py"
+    echo "🚀 Parallel execution mode enabled"
+    echo "   Workers: $MAX_WORKERS"
+    echo "   Execution plan: .claude/execution-plan.json"
+    echo ""
+  else
+    echo "⚠️  Warning: enable_parallel_execution is true but no execution plan found"
+    echo "   Falling back to sequential execution with hybrid loops"
+    echo "   To use parallel execution:"
+    echo "   1. Run: /sdk-bridge:plan"
+    echo "   2. Run: /sdk-bridge:handoff"
+    echo ""
+  fi
+fi
+
+# Build command based on execution mode
+if [ "$EXECUTION_MODE" = "parallel" ]; then
+  # Parallel coordinator command
+  CMD="$PYTHON $HARNESS \
+    --project-dir $PROJECT_DIR \
+    --model $MODEL \
+    --max-workers $MAX_WORKERS \
+    --max-sessions $MAX_SESSIONS \
+    --execution-plan .claude/execution-plan.json \
+    --log-level $LOG_LEVEL"
+
+  if [ "$ENABLE_MEMORY" = "false" ]; then
+    CMD="$CMD --disable-semantic-memory"
+  fi
+else
+  # Sequential hybrid loop command
+  CMD="$PYTHON $HARNESS \
+    --project-dir $PROJECT_DIR \
+    --model $MODEL \
+    --max-iterations $MAX_ITERATIONS \
+    --max-inner-loops $MAX_INNER \
+    --log-level $LOG_LEVEL"
+
+  if [ "$ENABLE_MEMORY" = "false" ]; then
+    CMD="$CMD --disable-semantic-memory"
+  fi
 fi
 
 # Launch in background
@@ -124,7 +172,12 @@ echo $PID > "$PID_FILE"
 sleep 2
 if ps -p $PID > /dev/null 2>&1; then
   echo "✅ SDK Bridge launched (PID: $PID)"
+  echo "   Mode: $EXECUTION_MODE"
+  if [ "$EXECUTION_MODE" = "parallel" ]; then
+    echo "   Workers: $MAX_WORKERS"
+  fi
   echo "📝 Logs: $LOG_FILE"
+  echo ""
 else
   echo "❌ Failed to launch SDK Bridge"
   echo "Check $LOG_FILE for details"
@@ -136,40 +189,79 @@ fi
 
 Display success message to user:
 
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚀 Handoff to SDK Bridge Complete!
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```bash
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🚀 Handoff to SDK Bridge Complete!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
 
-✨ Active Features:
-  • Hybrid Loops: Same-session self-healing + multi-session progression
-  • Semantic Memory: Learning from past implementations
-  • Adaptive Intelligence: Smart retry strategies
-  • Model Selection: Automatic Sonnet/Opus routing
+if [ "$EXECUTION_MODE" = "parallel" ]; then
+  echo "✨ Parallel Execution Mode:"
+  echo "  • $MAX_WORKERS workers executing features concurrently"
+  echo "  • Git-isolated branches per worker"
+  echo "  • Dependency-aware execution levels"
+  echo "  • Automatic merge coordination"
+  echo ""
+  echo "✨ Advanced Features (per worker):"
+else
+  echo "✨ Active Features:"
+fi
 
-📊 Configuration:
-  Model: <model-name>
-  Max Sessions: <max-sessions>
-  Inner Loops: <max-inner-loops> (per session)
-  Semantic Memory: Enabled
+echo "  • Hybrid Loops: Same-session self-healing + multi-session progression"
+echo "  • Semantic Memory: Learning from past implementations"
+echo "  • Adaptive Intelligence: Smart retry strategies"
+echo "  • Model Selection: Automatic Sonnet/Opus routing"
+echo ""
+echo "📊 Configuration:"
+echo "  Model: $MODEL"
+echo "  Max Sessions: $MAX_SESSIONS"
 
-What Happens Now:
-  • Agent works through features in feature_list.json
-  • Creates git commits after each successful feature
-  • Learns from past implementations via semantic memory
-  • Adapts retry strategy based on feature complexity
-  • Requests approval for high-risk changes
+if [ "$EXECUTION_MODE" = "parallel" ]; then
+  echo "  Workers: $MAX_WORKERS"
+  echo "  Mode: Parallel execution"
+else
+  echo "  Inner Loops: $MAX_INNER (per session)"
+  echo "  Mode: Sequential execution"
+fi
 
-You Can:
-  • Close this terminal - agent continues independently
-  • Monitor progress: /sdk-bridge:status
-  • View live logs: tail -f .claude/sdk-bridge.log
-  • Approve requests: /sdk-bridge:approve <id>
-  • Cancel if needed: /sdk-bridge:cancel
-  • Resume when done: /sdk-bridge:resume
+echo "  Semantic Memory: $([ "$ENABLE_MEMORY" = "true" ] && echo "Enabled" || echo "Disabled")"
+echo ""
+echo "What Happens Now:"
 
-The SDK agent is now running autonomously in the background.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+if [ "$EXECUTION_MODE" = "parallel" ]; then
+  echo "  • Multiple workers execute independent features simultaneously"
+  echo "  • Each worker creates isolated git branch"
+  echo "  • Features within same dependency level run in parallel"
+  echo "  • Coordinator merges completed branches"
+  echo "  • Learns from past implementations via semantic memory"
+  echo "  • Requests approval for high-risk changes"
+else
+  echo "  • Agent works through features in feature_list.json"
+  echo "  • Creates git commits after each successful feature"
+  echo "  • Learns from past implementations via semantic memory"
+  echo "  • Adapts retry strategy based on feature complexity"
+  echo "  • Requests approval for high-risk changes"
+fi
+
+echo ""
+echo "You Can:"
+echo "  • Close this terminal - agent continues independently"
+
+if [ "$EXECUTION_MODE" = "parallel" ]; then
+  echo "  • Monitor workers: /sdk-bridge:observe"
+else
+  echo "  • Monitor progress: /sdk-bridge:status"
+fi
+
+echo "  • View live logs: tail -f .claude/sdk-bridge.log"
+echo "  • Approve requests: /sdk-bridge:approve"
+echo "  • Cancel if needed: /sdk-bridge:cancel"
+echo "  • Resume when done: /sdk-bridge:resume"
+echo ""
+echo "The SDK agent is now running autonomously in the background."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
 ```
 
 ## Error Handling
