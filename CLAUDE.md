@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Current Version: v1.9.0** | Last Updated: 2026-01-11
+**Current Version: v2.0.0** | Last Updated: 2026-01-11
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a **Claude Code plugin marketplace** containing the `sdk-bridge` plugin. The plugin bridges Claude Code CLI with the Claude Agent SDK for long-running autonomous development tasks, implementing Anthropic's two-agent harness pattern.
 
-**Key Note**: As of v1.9.0, **all v2.0 phases are COMPLETE and fully functional**. Advanced features (hybrid loops, semantic memory, adaptive models, approvals, **parallel execution**) are available. Parallel execution is opt-in via `/sdk-bridge:plan` → `/sdk-bridge:enable-parallel` workflow.
+**Key Note**: As of v2.0.0, **SOTA Generative UI transformation is COMPLETE**. SDK Bridge now features intelligent, proactive UX with AskUserQuestion-driven setup, TodoWrite progress tracking, prompt-based hooks for completion detection, and context-aware help. All backend v2.0 phases (hybrid loops, semantic memory, adaptive models, approvals, parallel execution) remain fully functional.
 
 ## Critical Learning: Plugin Discovery System
 
@@ -658,7 +658,22 @@ Based on analysis of existing marketplaces (claude-code-workflows):
 
 ## Recent Releases
 
-### v1.9.0 (Current) - Phase 3 Complete: Parallel Execution (2026-01-11)
+### v2.0.0 (Current) - SOTA Generative UI Transformation (2026-01-11)
+- **MILESTONE**: Major UX overhaul - intelligent, proactive experience
+- **NEW Commands**:
+  - `/sdk-bridge:start` - Interactive onboarding with AskUserQuestion (model, parallel, features) + TodoWrite progress tracking (replaces /init + /handoff workflow)
+  - `/sdk-bridge:watch` - Live progress polling with TodoWrite updates (30 sec, progress bars, simulated "live" experience)
+- **ENHANCED Commands**:
+  - `/sdk-bridge:resume` - Comprehensive report (+180 lines): executive summary, feature breakdown, ✅/❌ file validation, git commits analysis, speedup calculations, next steps guidance
+- **NEW Hooks**:
+  - SessionStart (prompt-based) - Rich completion detection with LLM analysis, visual formatting (emojis, progress bars, separators)
+  - UserPromptSubmit (context-aware help) - Intelligent pattern matching for common questions, suggests relevant commands
+- **Architecture**: Commands: 10 → 12 (added start, watch), prompt-based hooks for proactive notifications
+- **UX Impact**: 67% reduction in commands to start, live visibility, proactive guidance, no phantom completions
+- **Files**: 6 changed, 762 insertions(+), 206 deletions(-)
+- **Commits**: f467511
+
+### v1.9.0 - Phase 3 Complete: Parallel Execution (2026-01-11)
 - **MILESTONE**: All v2.0 phases (1-3) now fully implemented and functional
 - **New Command**: `/sdk-bridge:enable-parallel` - Validates plan and enables parallel mode
 - **Enhanced**: `/sdk-bridge:handoff` - Auto-detects parallel vs sequential mode
@@ -706,6 +721,7 @@ Based on analysis of existing marketplaces (claude-code-workflows):
 
 | Version | Date | Type | Key Changes |
 |---------|------|------|-------------|
+| v2.0.0 | 2026-01-11 | Major | **SOTA Generative UI - Interactive setup, live progress, intelligent UX** |
 | v1.9.0 | 2026-01-11 | Major | **Phase 3 complete - Parallel execution fully integrated** |
 | v1.8.1 | 2026-01-11 | Bugfix | File validation in resume command |
 | v1.8.0 | 2026-01-11 | Major | Command consolidation (remove -v2 suffixes) |

@@ -2,370 +2,445 @@
 
 # SDK Bridge Marketplace
 
-**Version 1.9.0** - Bridge Claude Code CLI with the Claude Agent SDK for long-running autonomous development tasks.
+**Version 2.0.0** - SOTA Autonomous Development with Intelligent Generative UI
+
+## 🎉 What's New in v2.0: Generative UI Transformation
+
+SDK Bridge v2.0 transforms from command-driven to **intelligent, proactive** experience:
+
+### ✨ Before (v1.x): Manual Command Flow
+```
+/sdk-bridge:init
+/sdk-bridge:handoff
+tail -f .claude/sdk-bridge.log  # External monitoring
+/sdk-bridge:status              # Manual polling
+/sdk-bridge:resume              # Finally see results
+```
+
+### 🚀 After (v2.0): Intelligent, Guided Experience
+```
+/sdk-bridge:start               # Interactive setup with AskUserQuestion
+                                # → TodoWrite progress tracking
+                                # → Auto-launch with visibility
+
+/sdk-bridge:watch               # Live progress updates in chat (optional)
+
+[SessionStart Hook]             # Auto-detects completion, notifies you
+                                # → Rich notification with progress bars
+
+/sdk-bridge:resume              # Comprehensive report with:
+                                # → ✅/❌ file validation
+                                # → Git commits analysis
+                                # → Speedup calculations
+```
+
+**Context-aware help** via prompt hooks - ask questions naturally, get intelligent guidance!
+
+---
 
 ## Overview
 
-This marketplace provides the **sdk-bridge** plugin, which enables seamless handoff between interactive Claude Code CLI sessions and autonomous Agent SDK execution. Perfect for long-running projects that need to run for hours or days without manual supervision.
+**sdk-bridge** seamlessly bridges Claude Code CLI with the Claude Agent SDK for long-running autonomous development. Perfect for projects requiring hours or days of autonomous work.
 
-**SOTA autonomous development plugin** featuring hybrid loops, semantic memory, parallel execution, adaptive intelligence, and human-in-the-loop approvals.
+**SOTA features**: Hybrid loops, semantic memory, parallel execution, adaptive intelligence, human-in-the-loop approvals, and now **generative UI** for delightful user experience.
+
+---
 
 ## Features
 
-### Core Capabilities
+### 🎨 Generative UI (NEW in v2.0)
 
-- **Autonomous Multi-Session Development**: Hand off to SDK agent that works through features independently
-- **Hybrid Loop Pattern**: Combines same-session self-healing with multi-session progression
-- **Semantic Memory**: Cross-project learning from past implementations
-- **Adaptive Model Selection**: Smart Sonnet/Opus routing based on complexity and risk
-- **Parallel Execution**: Dependency-aware parallel feature implementation
-- **Approval Workflow**: Human-in-the-loop for high-risk operations (non-blocking)
-- **File Validation**: Verifies deliverables actually exist (no phantom completions)
+- **Interactive Onboarding** (`/start`): AskUserQuestion-driven setup
+  - Model selection (Sonnet vs Opus)
+  - Parallel execution toggle
+  - Advanced features multi-select
+  - TodoWrite progress tracking throughout
 
-### User Experience
+- **Live Progress** (`/watch`): Real-time updates in chat
+  - 30-second polling with TodoWrite updates
+  - Progress bars, completion percentages
+  - Simulated "live" experience
 
-- **Progress Tracking**: Monitor progress with real-time status updates
-- **Graceful Handoff/Resume**: Seamlessly transition between CLI and SDK with full state preservation
-- **Validation**: Pre-handoff checks ensure environment is ready
-- **Comprehensive Reporting**: Detailed completion reports with achievements, issues, and recommendations
+- **Intelligent Resume**: Comprehensive completion reports
+  - Executive summary with visual progress
+  - Feature-by-feature breakdown
+  - ✅/❌ Deliverable file validation
+  - Git commits analysis
+  - Speedup calculations for parallel mode
+
+- **Proactive Notifications**: SessionStart hook auto-detects completion
+  - Rich visual formatting (emojis, bars, separators)
+  - Context-aware messaging
+  - Clear call-to-action
+
+- **Context-Aware Help**: UserPromptSubmit hook
+  - Intelligent pattern matching for common questions
+  - Suggests relevant commands based on context
+  - Non-intrusive, only activates when relevant
+
+### 🤖 Core Autonomous Development
+
+- **Autonomous Multi-Session Development**: Hand off to SDK agent for independent feature implementation
+- **Hybrid Loop Pattern** (v2.0 Phase 1): Same-session self-healing + multi-session progression (60% cost reduction)
+- **Semantic Memory** (v2.0 Phase 1): Cross-project learning from past successful implementations
+- **Adaptive Model Selection** (v2.0 Phase 2): Smart Sonnet/Opus routing based on complexity, risk, and past failures
+- **Parallel Execution** (v2.0 Phase 3): Dependency-aware parallel feature implementation (2-4x speedup)
+- **Approval Workflow** (v2.0 Phase 2): Human-in-the-loop for high-risk operations (non-blocking)
+- **File Validation** (v1.8.1): Verifies deliverables exist (no phantom completions)
+
+### 📊 User Experience Excellence
+
+- **Progress Tracking**: Real-time status with live updates via `/watch`
+- **Graceful Handoff/Resume**: Seamless CLI ↔ SDK transitions with full state preservation
+- **Validation**: Pre-handoff checks ensure environment readiness
+- **Comprehensive Reporting**: Detailed completion reports with achievements, issues, recommendations
 - **File-Based State Management**: Reliable state sharing between CLI and SDK
+- **Visual Feedback**: Progress bars, emojis, separators for engaging experience
+
+---
 
 ## Installation
 
-### Step 1: Add Marketplace
+### From flight505-marketplace (Recommended)
 
 ```bash
-/plugin marketplace add flight505/sdk-bridge-marketplace
+# Add marketplace
+/plugin marketplace add flight505/flight505-marketplace
+
+# Install plugin
+/plugin install sdk-bridge@flight505-marketplace
 ```
 
-### Step 2: Install Plugin
+### From standalone marketplace
 
 ```bash
+# Add marketplace
+/plugin marketplace add flight505/sdk-bridge-marketplace
+
+# Install plugin
 /plugin install sdk-bridge@sdk-bridge-marketplace
 ```
 
-## Quick Start
+See [INSTALLATION.md](./INSTALLATION.md) for detailed installation instructions and troubleshooting.
+
+---
+
+## Quick Start (v2.0)
 
 ### 1. Setup Harness (First Time Only)
 
 ```bash
 /sdk-bridge:lra-setup
-# Installs 7 harness scripts to ~/.claude/skills/
-# • autonomous_agent.py (v1.4.0 core)
-# • hybrid_loop_agent.py (v2.0 - hybrid loops)
-# • semantic_memory.py (cross-project learning)
-# • model_selector.py (adaptive Sonnet/Opus routing)
-# • approval_system.py (risk assessment & approvals)
-# • dependency_graph.py (parallel execution planning)
-# • parallel_coordinator.py (multi-worker orchestration)
-# Verifies claude-agent-sdk is installed
 ```
 
-### 2. Create a Plan
+Installs 7 harness scripts to `~/.claude/skills/`:
+- `autonomous_agent.py` (v1.4.0 core)
+- `hybrid_loop_agent.py` (v2.0 - hybrid loops)
+- `semantic_memory.py` (cross-project learning)
+- `model_selector.py` (adaptive Sonnet/Opus routing)
+- `approval_system.py` (risk assessment & approvals)
+- `dependency_graph.py` (parallel execution planning)
+- `parallel_coordinator.py` (multi-worker orchestration)
+
+Verifies `claude-agent-sdk` is installed.
+
+### 2. Create Feature Plan
 
 ```bash
 /plan
-# Describe your project vision
-# Result: feature_list.json with all features
 ```
 
-### 3. Initialize SDK Bridge
+Describe your project vision → generates `feature_list.json` with all features.
+
+### 3. Start Autonomous Development ⭐ NEW
 
 ```bash
-/sdk-bridge:init
-# Creates .claude/sdk-bridge.local.md configuration
-# Sets up advanced features (all enabled by default)
+/sdk-bridge:start
 ```
 
-### 4. Analyze Dependencies (Optional - For Parallel Execution)
+**Interactive setup** with AskUserQuestion:
+1. **Model**: Choose Sonnet (fast, cost-effective) or Opus (complex tasks)
+2. **Parallel Mode**: Enable if you ran `/sdk-bridge:plan` (2-4x speedup)
+3. **Advanced Features**: Select from Semantic Memory, Adaptive Models, Approvals
+
+**TodoWrite** shows progress:
+- ✅ Prerequisites validated
+- ✅ Configuration created
+- ✅ Validation passed
+- ✅ Agent launched (PID: 12345)
+
+**Result**: Agent launches with full visibility, estimated completion time, and next steps.
+
+### 4. Monitor Progress (Optional)
 
 ```bash
-/sdk-bridge:plan
-# Analyzes feature dependencies
-# Creates parallel execution plan with dependency graph
-# Shows estimated speedup from parallelization
+/sdk-bridge:watch
 ```
 
-### 5. Enable Parallel Mode (Optional - If Recommended)
+Watch live updates for 30 seconds with TodoWrite progress bars and feature status.
 
-```bash
-/sdk-bridge:enable-parallel
-# Validates execution plan exists
-# Updates config to enable parallel execution
-# Shows estimated speedup and next steps
-# Enables multi-worker parallel mode
-```
-
-### 6. Hand Off to SDK
-
-```bash
-/sdk-bridge:handoff
-# Validates prerequisites
-# Auto-detects parallel vs sequential mode
-# Launches SDK agent in background with hybrid loops
-# Uses semantic memory for learning from past projects
-# Adaptive model selection (Sonnet for standard, Opus for complex/risky)
-# Parallel mode: Launches multiple workers with git-isolated branches
-# You can close CLI - agent continues working
-```
-
-### 7. Monitor Progress (Optional)
-
+**Or check status anytime**:
 ```bash
 /sdk-bridge:status
-# Check current progress
-# View session count, feature completion
-
-/sdk-bridge:observe
-# Real-time dashboard with live worker status (parallel mode)
-# Shows current session, progress bars, recent activity
 ```
 
-### 8. Approve High-Risk Operations (If Prompted)
-
+**Or view logs**:
 ```bash
-/sdk-bridge:approve
-# Review pending operations
-# Choose from alternatives or proceed with recommendation
-# Non-blocking - other features continue while waiting
+tail -f .claude/sdk-bridge.log
 ```
 
-### 9. Resume When Complete
+### 5. Review Completion
 
+When complete, **SessionStart hook** notifies you automatically with rich visual summary:
+
+```
+🎉 SDK Agent Completed!
+
+10/10 features (100%)
+[████████████████████] 100%
+45 minutes (3x faster with parallel)
+
+/sdk-bridge:resume to review
+```
+
+**Then review work**:
 ```bash
 /sdk-bridge:resume
-# Detailed completion report
-# Validates deliverable files actually exist (no phantom completions)
-# Review achievements and remaining work
-# Shows missing files with troubleshooting guidance
 ```
 
-## Commands
+**Comprehensive report** with:
+- 📊 Executive summary with progress bars
+- 📋 Feature-by-feature breakdown
+- 📦 ✅/❌ Deliverable file validation
+- 📝 Git commits since handoff
+- ⚡ Speedup calculations (parallel mode)
+- 🎯 Next steps guidance
+
+---
+
+## Commands (12 Total)
+
+### Primary Workflow (v2.0 SOTA)
 
 | Command | Description |
 |---------|-------------|
-| `/sdk-bridge:lra-setup` | Install 7 harness scripts (first-time setup) |
-| `/sdk-bridge:init` | Initialize project for SDK bridge with parallel config |
-| `/sdk-bridge:plan` | Analyze dependencies and create parallel execution plan |
-| `/sdk-bridge:enable-parallel` | Enable parallel execution mode (after plan) |
-| `/sdk-bridge:handoff` | Launch autonomous SDK agent (auto-detects mode) |
-| `/sdk-bridge:approve` | Approve pending high-risk operations |
-| `/sdk-bridge:observe` | Real-time dashboard with live progress (parallel mode) |
-| `/sdk-bridge:status` | Check progress and session count |
-| `/sdk-bridge:resume` | Return to CLI with completion report & file validation |
-| `/sdk-bridge:cancel` | Stop running SDK agent |
+| `/sdk-bridge:lra-setup` | Install harness scripts (first time only) |
+| `/sdk-bridge:start` | ⭐ Interactive onboarding + launch (replaces init + handoff) |
+| `/sdk-bridge:watch` | ⭐ Live progress updates with TodoWrite (30 sec polling) |
+| `/sdk-bridge:status` | Check current agent status |
+| `/sdk-bridge:resume` | ⭐ Comprehensive completion report with file validation |
+| `/sdk-bridge:cancel` | Stop running agent |
+
+### Advanced Workflow (Power Users)
+
+| Command | Description |
+|---------|-------------|
+| `/sdk-bridge:init` | Create configuration manually (for customization) |
+| `/sdk-bridge:handoff` | Launch agent manually (for advanced control) |
+| `/sdk-bridge:plan` | Analyze dependencies for parallel execution |
+| `/sdk-bridge:enable-parallel` | Enable parallel mode after planning |
+| `/sdk-bridge:approve` | Review and approve high-risk operations |
+| `/sdk-bridge:observe` | Experimental: Real-time dashboard (future) |
+
+---
 
 ## Advanced Features
 
-All advanced features are **enabled by default** in v1.8.0+. You can disable specific features in `.claude/sdk-bridge.local.md`.
+### Parallel Execution (v2.0 Phase 3)
 
-### Hybrid Loops (v2.0 Phase 1)
+Enable 2-4x speedup for independent features:
 
-Combines **same-session self-healing** (Ralph Wiggum pattern) with **multi-session progression**:
+```bash
+# 1. Analyze dependencies
+/sdk-bridge:plan
 
-- Fast iteration on simple fixes (no API overhead)
-- Reduces costs by up to 60%
-- Automatically escalates to new session when stuck
-- Configurable: `max_inner_loops: 5` (default)
+# 2. Review execution plan
+cat .claude/execution-plan.json
+
+# 3. Enable parallel mode
+/sdk-bridge:enable-parallel
+
+# 4. Start (will use parallel mode automatically)
+/sdk-bridge:start
+```
+
+Features are executed in levels based on dependencies. Git-isolated workers run concurrently.
 
 ### Semantic Memory (v2.0 Phase 1)
 
-**Cross-project learning** that remembers successful implementations:
+Cross-project learning suggests solutions from past successful implementations:
 
-- SQLite database of past solutions
-- Feature similarity matching
-- Suggests proven approaches
-- Learns from all your projects
-- Disable: `enable_semantic_memory: false`
+```yaml
+# In .claude/sdk-bridge.local.md
+enable_semantic_memory: true
+```
 
-### Adaptive Model Selection (v2.0 Phase 2)
+Automatically suggests patterns when similar features detected.
 
-**Smart Sonnet/Opus routing** based on:
+### Adaptive Models (v2.0 Phase 2)
 
-- Feature complexity (LOC, dependencies, scope)
-- Risk level (architectural changes, data migrations, security)
-- Historical performance (past failures trigger Opus)
-- Cost optimization (Sonnet for standard work)
-- Disable: `enable_adaptive_models: false`
+Smart Sonnet/Opus routing based on complexity and risk:
+
+```yaml
+# In .claude/sdk-bridge.local.md
+enable_adaptive_models: true
+```
+
+- Sonnet: Standard features (90% of work)
+- Opus: Complex refactoring, architectural changes, retry failures
 
 ### Approval Workflow (v2.0 Phase 2)
 
-**Human-in-the-loop** for high-risk operations:
+Human-in-the-loop for high-risk operations:
 
-- Pauses for database migrations, API changes, architectural refactors
-- Presents alternatives with impact analysis
-- Non-blocking - other features continue
-- `/sdk-bridge:approve` to review and decide
-- Disable: `enable_approval_nodes: false`
+```yaml
+# In .claude/sdk-bridge.local.md
+enable_approval_nodes: true
+```
 
-### Parallel Execution (v2.0 Phase 3 - COMPLETE)
+Pauses for:
+- Database migrations
+- API changes with breaking potential
+- Architectural refactors
+- Security-sensitive operations
 
-**Dependency-aware parallel implementation** (fully integrated in v1.9.0):
+Non-blocking: Other features continue while waiting for approval.
 
-- Automatic dependency detection (explicit + implicit)
-- Git-isolated workers (separate branches per feature)
-- Critical path analysis for bottleneck identification
-- Estimated speedup calculation (2-4x typical)
-- Multi-worker orchestration with automatic merge coordination
-- Workflow: `/sdk-bridge:plan` → `/sdk-bridge:enable-parallel` → `/sdk-bridge:handoff`
-- Monitor with: `/sdk-bridge:observe` (real-time worker dashboard)
-
-### File Validation (v1.8.1)
-
-**No more phantom completions**:
-
-- Resume command verifies files actually exist
-- Shows ✅/❌ status for each deliverable
-- Identifies missing files with troubleshooting guidance
-- Supports 15+ file extensions
-
-## Use Cases
-
-### Fresh Project Start
-Plan comprehensively, hand off, and let SDK build the entire project autonomously over 12-24 hours with hybrid loops for efficiency.
-
-### Feature Batch Implementation
-Add new features to existing codebase - SDK integrates cleanly with semantic memory suggesting proven patterns.
-
-### Complex Architectural Changes
-Adaptive model selection routes high-risk refactors to Opus, with approval workflow for critical decisions.
-
-### Parallel Feature Development
-Use `/sdk-bridge:plan` to analyze dependencies and implement multiple independent features simultaneously.
-
-### Technical Debt Cleanup
-Create systematic refactoring checklist and let SDK work through improvements with hybrid loops for fast iteration.
-
-### Bug Fix Marathon
-Convert issues to features and let SDK tackle multiple bugs systematically with cross-project learning.
-
-### Overnight Development
-Hand off before bed, wake up to completed features and comprehensive reports with file validation.
+---
 
 ## Configuration
 
-The plugin creates `.claude/sdk-bridge.local.md` with these settings:
+Configuration stored in `.claude/sdk-bridge.local.md`:
 
 ```yaml
 ---
-# v1.4.0 Settings
+# Basic Settings
 enabled: true
-model: claude-sonnet-4-5-20250929          # Sonnet recommended for standard work
-max_sessions: 20                            # Total sessions before stopping
-reserve_sessions: 2                         # Sessions for manual recovery
-progress_stall_threshold: 3                 # Stop if no progress
-auto_handoff_after_plan: false             # Manual handoff control
+model: claude-sonnet-4-5-20250929  # or claude-opus-4-5-20251101
+max_sessions: 20
+reserve_sessions: 2
 log_level: INFO
-webhook_url:                                # Optional webhook for notifications
 
-# Advanced Features (v2.0) - All enabled by default
-enable_v2_features: true                    # Master switch for all advanced features
-enable_semantic_memory: true                # Cross-project learning
-enable_adaptive_models: true                # Smart Sonnet/Opus routing
-enable_approval_nodes: true                 # Human-in-the-loop for high-risk ops
-max_inner_loops: 5                          # Same-session retries (hybrid loops)
+# v2.0 Advanced Features
+enable_v2_features: true
+enable_semantic_memory: true
+enable_adaptive_models: true
+enable_approval_nodes: true
+max_inner_loops: 5  # Same-session retries
 
-# Phase 3: Parallel Execution (v1.9.0)
-enable_parallel_execution: false            # Opt-in after /plan + /enable-parallel
-max_parallel_workers: 3                     # 2-4 recommended for parallel mode
+# v2.0 Phase 3: Parallel Execution
+enable_parallel_execution: false  # Enable via /enable-parallel
+max_parallel_workers: 3
 ---
 ```
 
-**Configuration Tips**:
+See [Configuration Reference](./plugins/sdk-bridge/skills/sdk-bridge-patterns/references/configuration.md) for all options.
 
-- **Sonnet (default)**: Fast, cost-effective, handles 90% of features
-- **Opus**: Automatically selected for complex/risky features if `enable_adaptive_models: true`
-- **Hybrid Loops**: Set `max_inner_loops: 3-7` for optimal balance
-- **Semantic Memory**: Learns across all projects, improves over time
-- **Approvals**: Only for high-risk operations (database, API, architecture)
-- **Parallel Execution**: Run `/sdk-bridge:plan` first, then `/sdk-bridge:enable-parallel` if recommended
-- **Parallel Workers**: 2-4 workers optimal (each uses API tokens and git branches)
+---
 
 ## Architecture
 
-Based on [Anthropic's long-running agent pattern](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents):
+### Two-Agent Harness Pattern
 
-### Core Pattern
+**CLI Agent** (Claude Code):
+- Interactive commands, user-facing
+- Validates prerequisites, creates configuration
+- Monitors progress, reviews completion
+- Uses hooks for proactive notifications
 
-- **Self-Contained**: Plugin bundles 7 harness scripts - no external dependencies
-- **Two-Agent Pattern**: Initializer sets up environment, Coding agent implements features
-- **Hybrid Loops**: Same-session iteration + multi-session progression
-- **File-Based State**: feature_list.json, claude-progress.txt for session memory
-- **Session Protocol**: CLAUDE.md defines project-specific rules
-- **Bootstrap Script**: init.sh ensures clean environment each session
+**SDK Agent** (subprocess):
+- Autonomous execution in background
+- Multi-session loop with state persistence
+- Advanced features (hybrid loops, semantic memory, parallel execution)
+- File-based communication with CLI
 
-### v2.0 Enhancements
+### State Management
 
-- **Hybrid Loop Agent** (`hybrid_loop_agent.py`): Combines fast inner loops with session progression
-- **Semantic Memory** (`semantic_memory.py`): SQLite-based cross-project learning
-- **Model Selector** (`model_selector.py`): Adaptive Sonnet/Opus routing with performance tracking
-- **Approval System** (`approval_system.py`): Risk assessment and human-in-the-loop workflow
-- **Dependency Graph** (`dependency_graph.py`): Automatic dependency detection for parallel planning
-- **Parallel Coordinator** (`parallel_coordinator.py`): Multi-worker orchestration with git isolation
+File-based state sharing between CLI and SDK:
+
+- `.claude/sdk-bridge.local.md` - Configuration with YAML frontmatter
+- `.claude/handoff-context.json` - Handoff metadata
+- `.claude/sdk-bridge.pid` - Process ID
+- `.claude/sdk-bridge.log` - Execution logs
+- `.claude/sdk_complete.json` - Completion signal
+- `feature_list.json` - Source of truth (only `passes` field updated)
+- `claude-progress.txt` - Session-to-session memory
+
+### Generative UI Components (v2.0)
+
+**AskUserQuestion**: Interactive setup with 1-4 questions, multiSelect support
+**TodoWrite**: Real-time progress tracking with 3 states (pending, in_progress, completed)
+**Prompt Hooks**: LLM-driven decision making for context-aware behavior
+
+---
 
 ## Documentation
 
-The plugin includes comprehensive documentation:
+- **[INSTALLATION.md](./INSTALLATION.md)** - Detailed installation guide with troubleshooting
+- **[CLAUDE.md](./CLAUDE.md)** - Developer guide for plugin development
+- **Skill Guide**: `/sdk-bridge-patterns` - Comprehensive 2800+ line guide (auto-loads when needed)
+- **State Files**: [Reference](./plugins/sdk-bridge/skills/sdk-bridge-patterns/references/state-files.md)
+- **Configuration**: [Reference](./plugins/sdk-bridge/skills/sdk-bridge-patterns/references/configuration.md)
+- **Workflow Example**: [TaskFlow 3-day build](./plugins/sdk-bridge/skills/sdk-bridge-patterns/examples/workflow-example.md)
+- **Scenarios**: [10 common scenarios](./plugins/sdk-bridge/skills/sdk-bridge-patterns/examples/handoff-scenarios.md)
 
-- **SKILL.md**: Complete usage guide (2800+ lines)
-- **workflow-example.md**: End-to-end example building TaskFlow app
-- **handoff-scenarios.md**: 10 common scenarios with workflows
-- **state-files.md**: Complete reference for all state files
-- **configuration.md**: Detailed configuration guide
-
-## Requirements
-
-- **Claude Code CLI**: Latest version
-- **Python**: 3.8+
-- **Claude Agent SDK**: Installed automatically during `/sdk-bridge:lra-setup`
-- **Git**: Repository recommended for version control
-- **API Authentication**: CLAUDE_CODE_OAUTH_TOKEN (preferred) or ANTHROPIC_API_KEY
-
-> **Note**: The plugin is self-contained and bundles all 7 harness scripts. Run `/sdk-bridge:lra-setup` once to install them to your `~/.claude/skills/` directory.
+---
 
 ## Recent Releases
 
-### v1.9.0 (Current) - Phase 3 Complete: Parallel Execution 🎉
-- **MILESTONE**: All v2.0 phases now fully implemented and functional!
-- New command: `/sdk-bridge:enable-parallel` - Enable multi-worker parallel mode
-- Enhanced `/sdk-bridge:handoff` - Auto-detects parallel vs sequential mode
-- Enhanced `/sdk-bridge:init` - Added parallel execution config flags
-- Parallel execution: 2-4x speedup for independent features
-- Git-isolated branches per worker (safe parallel execution)
-- Automatic dependency detection and level-based execution
-- Graceful fallback to sequential if no execution plan
-- 10 commands total (was 9)
+### v2.0.0 (2026-01-11) - SOTA Generative UI Transformation
 
-### v1.8.1 - File Validation Fix
-- Added deliverable file validation to resume command
-- No more phantom completions - verifies files actually exist
-- Clear ✅/❌ status for each deliverable
-- Troubleshooting guidance for missing files
+**Major UX Overhaul** - Intelligent, proactive experience:
 
-### v1.8.0 - Command Consolidation
-- Upgraded all commands to v2.0 standard
-- Removed confusing -v2 suffixes
-- Simplified from 10 to 9 commands
-- v2.0 features now THE standard (not alternatives)
+**NEW Commands**:
+- `/sdk-bridge:start` - Interactive onboarding with AskUserQuestion + TodoWrite
+- `/sdk-bridge:watch` - Live progress polling with visual updates
 
-### v1.7.1 - Installation Fix
-- Fixed critical bug: Now installs all 7 v2.0 scripts
-- Was only installing 1 of 7 scripts
-- Added module import validation
-- All advanced features now functional
+**ENHANCED Commands**:
+- `/sdk-bridge:resume` - Comprehensive report with ✅/❌ file validation, git analysis, speedup calculations
 
-### v1.7.0 - v2.0 Features (Phases 1-2 Initial)
-- Hybrid loops with same-session self-healing
-- Semantic memory with cross-project learning
-- Adaptive model selection (Sonnet/Opus routing)
-- Approval workflow for high-risk operations
-- Dependency graph analysis (Phase 3 foundation)
-- Note: Phase 3 parallel execution completed in v1.9.0
+**NEW Hooks**:
+- SessionStart (prompt-based) - Rich completion notifications with LLM analysis
+- UserPromptSubmit - Context-aware help for natural question answering
+
+**Impact**: 67% reduction in commands to start, live visibility, proactive guidance, no phantom completions
+
+### v1.9.0 (2026-01-11) - Phase 3 Complete: Parallel Execution
+
+- **Parallel Execution**: 2-4x speedup with multi-worker orchestration
+- **Auto-Detection**: Intelligent mode selection (parallel vs sequential)
+- **Commands**: `/enable-parallel` for opt-in workflow
+- **Integration**: Seamless fallback to sequential if no plan
+
+### v1.8.1 (2026-01-11) - File Validation
+
+- **Deliverable Validation**: Verifies files exist (no phantom completions)
+- **Troubleshooting**: Guidance for missing files
+
+### v1.7.0-1.8.0 - v2.0 Features Foundation
+
+- **Hybrid Loops** (Phase 1): Same-session self-healing
+- **Semantic Memory** (Phase 1): Cross-project learning
+- **Adaptive Models** (Phase 2): Smart Sonnet/Opus routing
+- **Approval Workflow** (Phase 2): Human-in-the-loop for high-risk ops
+
+---
 
 ## Support
 
-For issues, questions, or contributions, please visit the [GitHub repository](https://github.com/flight505/sdk-bridge-marketplace).
+- **Issues**: [GitHub Issues](https://github.com/flight505/sdk-bridge-marketplace/issues)
+- **Documentation**: [SDK Bridge Patterns Skill](./plugins/sdk-bridge/skills/sdk-bridge-patterns/SKILL.md)
+- **Repository**: [github.com/flight505/sdk-bridge-marketplace](https://github.com/flight505/sdk-bridge-marketplace)
+- **Author**: [Jesper Vang](https://github.com/flight505)
+
+---
 
 ## License
 
-MIT
+MIT License - See [LICENSE](./LICENSE) for details
+
+---
+
+**Built with ❤️ by Jesper Vang**
+
+**Powered by Claude Code & Claude Agent SDK** 🚀
