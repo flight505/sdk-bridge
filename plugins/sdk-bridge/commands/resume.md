@@ -104,6 +104,64 @@ if [ "$FEATURES_REMAINING" -gt 0 ]; then
 fi
 ```
 
+## Validate Deliverables
+
+```bash
+echo "Deliverable Verification:"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Extract all file references from completed features
+# Pattern: files with common extensions mentioned in descriptions/tests
+ALL_FILES=$(jq -r '.[] | select(.passes==true) | .description + " " + .test' feature_list.json | \
+  grep -oE '\b[a-zA-Z0-9_/-]+\.(py|js|ts|jsx|tsx|md|txt|json|yaml|yml|sh|sql|html|css|java|go|rs|cpp|c|h|rb|toml|conf|ini|xml)\b' | \
+  sort -u)
+
+if [ -z "$ALL_FILES" ]; then
+  echo "ℹ️  No deliverable files detected from feature descriptions"
+  echo "   (Features may be non-file changes like refactoring or fixes)"
+  echo ""
+else
+  # Check each file
+  TOTAL_DELIVERABLES=0
+  MISSING_DELIVERABLES=0
+  MISSING_FILES=""
+
+  while IFS= read -r file; do
+    TOTAL_DELIVERABLES=$((TOTAL_DELIVERABLES + 1))
+
+    if [ -f "$file" ]; then
+      echo "  ✅ $file"
+    else
+      echo "  ❌ $file (MISSING)"
+      MISSING_DELIVERABLES=$((MISSING_DELIVERABLES + 1))
+      MISSING_FILES="${MISSING_FILES}${file}\n"
+    fi
+  done <<< "$ALL_FILES"
+
+  echo ""
+
+  EXISTING_DELIVERABLES=$((TOTAL_DELIVERABLES - MISSING_DELIVERABLES))
+
+  if [ "$MISSING_DELIVERABLES" -eq 0 ]; then
+    echo "✅ All $EXISTING_DELIVERABLES deliverable files verified"
+  else
+    echo "⚠️  Warning: $MISSING_DELIVERABLES of $TOTAL_DELIVERABLES deliverable files are missing!"
+    echo ""
+    echo "   This indicates the SDK agent marked features as complete but"
+    echo "   didn't create the expected files. Common causes:"
+    echo "   • Commit succeeded but files weren't actually written"
+    echo "   • Files were created in wrong directory"
+    echo "   • Git issues prevented files from being added"
+    echo "   • File patterns were incorrectly extracted from descriptions"
+    echo ""
+    echo "   Recommendation: Review the missing files and re-run those features"
+  fi
+
+  echo ""
+fi
+```
+
 ## Review Recent Commits
 
 ```bash
