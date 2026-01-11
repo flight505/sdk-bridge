@@ -20,7 +20,7 @@ if [ ! -f "$WORKERS_FILE" ]; then
   echo "❌ No active workers found"
   echo ""
   echo "Start parallel execution with:"
-  echo "  /sdk-bridge:handoff-v2"
+  echo "  /sdk-bridge:handoff"
   exit 0
 fi
 

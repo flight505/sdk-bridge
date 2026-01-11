@@ -1,82 +1,207 @@
 ---
-description: "Hand off current work to SDK agent for autonomous execution"
-argument-hint: ""
-allowed-tools: ["Task", "Bash", "Read", "TodoWrite"]
+description: "Hand off to SDK Bridge autonomous agent"
+argument-hint: "[project-dir]"
+allowed-tools: ["Bash", "Read", "Write", "Task", "TodoWrite", "AskUserQuestion"]
 ---
 
-# Hand Off to SDK Agent
+# Hand Off to SDK Bridge
 
-I'll hand off your work to an autonomous SDK agent that will work on implementing features from your feature_list.json.
+I'll hand off feature implementation to the SDK Bridge autonomous agent with:
+- **Hybrid Loops**: Same-session self-healing + multi-session progression
+- **Semantic Memory**: Cross-project learning from past implementations
+- **Adaptive Intelligence**: Smart retry strategies and model selection
 
-## Pre-Handoff Validation
+## Prerequisites Check
 
-First, let me use the **handoff-validator** agent to check that everything is ready for handoff.
+Before handoff, run the handoff validator to ensure all prerequisites are met.
 
-Use the Task tool to invoke the handoff-validator agent. The agent will check:
-- feature_list.json exists with remaining work
-- Git repository is initialized
-- Harness and SDK are installed
-- No conflicting SDK processes running
-- API authentication configured
+Use the Task tool to invoke the `handoff-validator` agent.
 
-If the validator finds any issues, it will STOP the handoff and tell you how to fix them.
+The validator will check:
+1. ✅ SDK virtual environment exists and claude-agent-sdk is installed
+2. ✅ Project has `feature_list.json`
+3. ✅ API authentication is configured (CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY)
+4. ✅ Git repository is clean or has only intended changes
+5. ✅ Configuration file exists (`.claude/sdk-bridge.local.md`)
+6. ✅ Harness scripts installed
 
-If validation passes, proceed to launch the SDK agent.
+## Configuration
 
-## Launch SDK Agent
+Ensure `.claude/sdk-bridge.local.md` has proper settings:
 
-After validation passes, launch the harness:
+```yaml
+---
+enabled: true
+model: claude-sonnet-4-5-20250929
+max_sessions: 20
+reserve_sessions: 2
+progress_stall_threshold: 3
+log_level: INFO
+webhook_url: https://example.com/webhook  # optional
+
+# Advanced features
+enable_v2_features: true
+enable_semantic_memory: true
+enable_adaptive_models: true
+enable_approval_nodes: true
+max_inner_loops: 5  # Same-session retries
+---
+```
+
+If settings are missing, ask the user if they want to enable advanced features.
+
+## Handoff Process
+
+### Step 1: Validate Prerequisites
+
+Use Task tool to invoke the handoff-validator agent:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/launch-harness.sh .
+# The agent will perform comprehensive validation
 ```
 
-This script will:
-1. Read configuration from `.claude/sdk-bridge.local.md`
-2. Launch `autonomous_agent.py` in background with `nohup`
-3. Save process ID to `.claude/sdk-bridge.pid`
-4. Redirect output to `.claude/sdk-bridge.log`
-5. Create `.claude/handoff-context.json` tracking file
+If validation fails, stop and report errors to user.
 
-## Post-Handoff Instructions
+### Step 2: Create Handoff Context
 
-After the SDK agent launches successfully, inform the user:
+Create `.claude/handoff-context.json` with metadata:
+
+```bash
+cat > .claude/handoff-context.json << 'EOF'
+{
+  "version": "2.0.0",
+  "handoff_time": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "mode": "hybrid_loops",
+  "features": {
+    "semantic_memory": true,
+    "adaptive_retry": true,
+    "parallel_execution": false
+  },
+  "session_count": 0,
+  "status": "running"
+}
+EOF
+```
+
+### Step 3: Launch Autonomous Agent
+
+Use Bash tool to launch the agent in background:
+
+```bash
+HARNESS="$HOME/.claude/skills/long-running-agent/harness/hybrid_loop_agent.py"
+PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
+PROJECT_DIR="${1:-.}"
+LOG_FILE=".claude/sdk-bridge.log"
+PID_FILE=".claude/sdk-bridge.pid"
+
+# Read configuration
+if [ -f ".claude/sdk-bridge.local.md" ]; then
+  FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' .claude/sdk-bridge.local.md)
+  MODEL=$(echo "$FRONTMATTER" | grep '^model:' | sed 's/model: *//' || echo "claude-sonnet-4-5-20250929")
+  MAX_SESSIONS=$(echo "$FRONTMATTER" | grep '^max_sessions:' | sed 's/max_sessions: *//' || echo "20")
+  RESERVE_SESSIONS=$(echo "$FRONTMATTER" | grep '^reserve_sessions:' | sed 's/reserve_sessions: *//' || echo "2")
+  MAX_INNER=$(echo "$FRONTMATTER" | grep '^max_inner_loops:' | sed 's/max_inner_loops: *//' || echo "5")
+  LOG_LEVEL=$(echo "$FRONTMATTER" | grep '^log_level:' | sed 's/log_level: *//' || echo "INFO")
+  ENABLE_MEMORY=$(echo "$FRONTMATTER" | grep '^enable_semantic_memory:' | sed 's/enable_semantic_memory: *//' || echo "true")
+fi
+
+# Calculate max iterations
+MAX_ITERATIONS=$((MAX_SESSIONS - RESERVE_SESSIONS))
+
+# Build command
+CMD="$PYTHON $HARNESS --project-dir $PROJECT_DIR --model $MODEL --max-iterations $MAX_ITERATIONS --max-inner-loops $MAX_INNER --log-level $LOG_LEVEL"
+
+if [ "$ENABLE_MEMORY" = "false" ]; then
+  CMD="$CMD --disable-semantic-memory"
+fi
+
+# Launch in background
+nohup $CMD > "$LOG_FILE" 2>&1 &
+PID=$!
+echo $PID > "$PID_FILE"
+
+# Verify process started
+sleep 2
+if ps -p $PID > /dev/null 2>&1; then
+  echo "✅ SDK Bridge launched (PID: $PID)"
+  echo "📝 Logs: $LOG_FILE"
+else
+  echo "❌ Failed to launch SDK Bridge"
+  echo "Check $LOG_FILE for details"
+  exit 1
+fi
+```
+
+### Step 4: Confirm Handoff
+
+Display success message to user:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Handoff Complete
+🚀 Handoff to SDK Bridge Complete!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-The SDK agent is now working autonomously on your project.
+✨ Active Features:
+  • Hybrid Loops: Same-session self-healing + multi-session progression
+  • Semantic Memory: Learning from past implementations
+  • Adaptive Intelligence: Smart retry strategies
+  • Model Selection: Automatic Sonnet/Opus routing
 
-What happens now:
-  • SDK agent works through features in feature_list.json
-  • One feature implemented per session
-  • Commits after each successful feature
-  • Logs progress to claude-progress.txt
-  • Stops when all features pass or max sessions reached
+📊 Configuration:
+  Model: <model-name>
+  Max Sessions: <max-sessions>
+  Inner Loops: <max-inner-loops> (per session)
+  Semantic Memory: Enabled
 
-You can:
-  • Close this CLI - the agent continues running
-  • Monitor anytime: /sdk-bridge:status
+What Happens Now:
+  • Agent works through features in feature_list.json
+  • Creates git commits after each successful feature
+  • Learns from past implementations via semantic memory
+  • Adapts retry strategy based on feature complexity
+  • Requests approval for high-risk changes
+
+You Can:
+  • Close this terminal - agent continues independently
+  • Monitor progress: /sdk-bridge:status
   • View live logs: tail -f .claude/sdk-bridge.log
+  • Approve requests: /sdk-bridge:approve <id>
   • Cancel if needed: /sdk-bridge:cancel
   • Resume when done: /sdk-bridge:resume
 
-The SDK agent will work until:
-  ✓ All features in feature_list.json pass, or
-  ✓ Max sessions limit reached, or
-  ✓ Progress stalls (no completion for 3+ sessions), or
-  ✓ You cancel it with /sdk-bridge:cancel
-
-When the agent completes, it will create .claude/sdk_complete.json
-and you can review its work with /sdk-bridge:resume.
+The SDK agent is now running autonomously in the background.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-## Important Notes
+## Error Handling
 
-- **Do NOT invoke the handoff-validator agent yourself** - use the Task tool to launch it as a subagent
-- **Wait for validation to complete** before proceeding to launch
-- **If validation fails**, stop immediately and show the user the error message
-- **The CLI can close** after handoff - the SDK agent runs independently
-- **Only launch once** - the script checks for existing processes
+If any step fails:
+1. Log error details to `.claude/sdk-bridge.log`
+2. Report to user with specific failure reason
+3. Suggest remediation steps
+4. Do NOT launch the agent if prerequisites fail
+
+**Common Issues**:
+
+- **Harness not found**: Run `/sdk-bridge:lra-setup` to install
+- **Configuration missing**: Run `/sdk-bridge:init` to create config
+- **feature_list.json missing**: Create feature list first
+- **Git not clean**: Commit or stash changes before handoff
+- **SDK not installed**: Check `.venv` exists with claude-agent-sdk
+
+## Notes
+
+- All advanced features enabled by default
+- Semantic memory learns across projects
+- Agent runs until completion or max sessions
+- Logs everything for transparency
+- User can monitor in real-time
+
+## Implementation
+
+Execute the steps above using appropriate tools:
+- **Task**: For invoking handoff-validator agent
+- **Bash**: For running scripts and launching agent
+- **Read**: For reading configuration files
+- **Write**: For creating handoff context
+- **AskUserQuestion**: If configuration is incomplete
+- **TodoWrite**: For tracking handoff progress

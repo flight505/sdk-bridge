@@ -4,9 +4,9 @@ argument-hint: "[feature-list.json]"
 allowed-tools: ["Bash", "Read", "Write", "AskUserQuestion"]
 ---
 
-# SDK Bridge Plan v2 - Parallel Execution Planning
+# SDK Bridge Plan - Parallel Execution Planning
 
-Analyze features for dependencies and create optimized parallel execution plan.
+Analyze features for dependencies and create optimized parallel execution plan with automatic detection of implicit dependencies.
 
 ## Step 1: Validate Prerequisites
 
@@ -162,7 +162,7 @@ if [ "$LEVELS" -gt 1 ] && [ "$TOTAL" -gt 3 ]; then
   echo "   To enable parallel execution:"
   echo "   1. Edit .claude/sdk-bridge.local.md"
   echo "   2. Set: enable_parallel_execution: true"
-  echo "   3. Run: /sdk-bridge:handoff-v2"
+  echo "   3. Run: /sdk-bridge:handoff"
 else
   echo "💡 Recommendation: Sequential execution is fine"
   echo ""
@@ -170,7 +170,7 @@ else
   echo "   Sequential execution will be simpler and safer."
   echo ""
   echo "   To proceed:"
-  echo "   Run: /sdk-bridge:handoff-v2"
+  echo "   Run: /sdk-bridge:handoff"
 fi
 
 echo ""
@@ -318,7 +318,7 @@ Level 2: 2 feature(s), parallelism=2
    To enable parallel execution:
    1. Edit .claude/sdk-bridge.local.md
    2. Set: enable_parallel_execution: true
-   3. Run: /sdk-bridge:handoff-v2
+   3. Run: /sdk-bridge:handoff
 ```
 
 ## Notes

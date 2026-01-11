@@ -106,19 +106,31 @@ This project is configured for SDK bridge workflows.
 
 - **webhook_url**: Optional webhook for notifications
 
-## v2.0 Settings (New!)
+## Advanced Features
 
-- **enable_v2_features**: Enable hybrid loops and semantic memory (default: false)
-  - Set to `true` to use SDK Bridge v2.0 features
-  - Requires `/sdk-bridge:handoff-v2` command
+- **enable_v2_features**: Enable all advanced features (default: true)
+  - Hybrid loops (same-session + multi-session)
+  - Semantic memory (cross-project learning)
+  - Adaptive model selection (Sonnet/Opus routing)
+  - Approval workflow for high-risk changes
 
 - **enable_semantic_memory**: Cross-project learning (default: true)
-  - Learns from past implementations
+  - Learns from past implementations across projects
   - Suggests solutions based on similar features
 
+- **enable_adaptive_models**: Smart model selection (default: true)
+  - Routes complex/high-risk features to Opus
+  - Uses Sonnet for standard features
+  - Escalates to Opus on retry failures
+
+- **enable_approval_nodes**: Human-in-the-loop approvals (default: true)
+  - Pauses for high-risk operations
+  - Presents alternatives and impact analysis
+  - Non-blocking (other features continue)
+
 - **max_inner_loops**: Same-session retries before starting new session (default: 5)
-  - Ralph Wiggum pattern for self-healing
-  - Reduces API costs for simple fixes
+  - Self-healing pattern for quick fixes
+  - Reduces API costs and time
 
 ## Usage
 

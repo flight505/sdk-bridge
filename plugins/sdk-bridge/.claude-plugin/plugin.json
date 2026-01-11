@@ -1,7 +1,7 @@
 {
   "name": "sdk-bridge",
-  "version": "1.7.1",
-  "description": "Bridge CLI and Agent SDK with parallel execution: dependency graphs, git-isolated workers, real-time monitoring (v2.0 installation fix).",
+  "version": "1.8.0",
+  "description": "SOTA autonomous development plugin: hybrid loops, semantic memory, parallel execution, adaptive intelligence.",
   "author": {
     "name": "Jesper",
     "email": "jesper@example.com"

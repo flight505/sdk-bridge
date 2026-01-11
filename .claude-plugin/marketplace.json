@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Bridge Claude Code CLI with Agent SDK for long-running autonomous development tasks",
-    "version": "1.7.1"
+    "version": "1.8.0"
   },
   "plugins": [
     {
       "name": "sdk-bridge",
       "source": "./plugins/sdk-bridge",
-      "description": "Bridge CLI and Agent SDK with parallel execution: dependency graphs, git-isolated workers, real-time monitoring (v2.0 installation fix)",
-      "version": "1.7.1",
+      "description": "SOTA autonomous development plugin: hybrid loops, semantic memory, parallel execution, adaptive intelligence",
+      "version": "1.8.0",
       "author": {
         "name": "flight505",
         "url": "https://github.com/flight505"
@@ -35,8 +35,7 @@
         "./commands/init.md",
         "./commands/lra-setup.md",
         "./commands/handoff.md",
-        "./commands/handoff-v2.md",
-        "./commands/plan-v2.md",
+        "./commands/plan.md",
         "./commands/approve.md",
         "./commands/observe.md",
         "./commands/status.md",
