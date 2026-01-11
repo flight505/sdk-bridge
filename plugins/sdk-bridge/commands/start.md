@@ -70,79 +70,51 @@ Create initial progress tracker:
 
 ## Step 3: Interactive Configuration
 
-Now I'll gather setup preferences using AskUserQuestion.
-
-First, check if execution plan exists to determine if parallel mode is available:
+First, check if execution plan exists to determine available options:
 
 ```bash
 HAS_PLAN=false
 if [ -f ".claude/execution-plan.json" ]; then
   HAS_PLAN=true
+  echo "Execution plan found - parallel mode available"
 fi
 ```
 
-Use AskUserQuestion to gather preferences:
+**Use the AskUserQuestion tool now** to present an interactive configuration menu to the user.
 
-**Question 1: Model Selection**
-```json
-{
-  "question": "Which Claude model should the agent use?",
-  "header": "Model",
-  "options": [
-    {
-      "label": "Sonnet (Recommended)",
-      "description": "Fast and capable - handles most development tasks efficiently. Best cost/performance ratio."
-    },
-    {
-      "label": "Opus",
-      "description": "Most capable - use for complex refactoring, architecture changes, or when Sonnet struggles."
-    }
-  ],
-  "multiSelect": false
-}
-```
+Build the questions array dynamically:
+- If HAS_PLAN=true: Ask all 3 questions
+- If HAS_PLAN=false: Ask only questions 1 and 3 (skip execution mode question)
 
-**Question 2: Parallel Execution** (only if HAS_PLAN=true)
-```json
-{
-  "question": "Enable parallel execution for faster completion?",
-  "header": "Execution",
-  "options": [
-    {
-      "label": "Parallel (Recommended)",
-      "description": "2-4x faster - launches multiple workers for independent features. Uses git-isolated branches."
-    },
-    {
-      "label": "Sequential",
-      "description": "One feature at a time - safer for tightly coupled features or first-time testing."
-    }
-  ],
-  "multiSelect": false
-}
-```
+Structure for the questions parameter:
+  - question: "Which Claude model should the agent use?"
+    header: "Model"
+    multiSelect: false
+    options:
+      - label: "Sonnet (Recommended)"
+        description: "Fast and capable - handles most development tasks efficiently. Best cost/performance ratio."
+      - label: "Opus"
+        description: "Most capable - use for complex refactoring, architecture changes, or when Sonnet struggles."
 
-**Question 3: Advanced Features**
-```json
-{
-  "question": "Which advanced features should be enabled?",
-  "header": "Features",
-  "options": [
-    {
-      "label": "Semantic Memory",
-      "description": "Cross-project learning - suggests solutions from past successful implementations."
-    },
-    {
-      "label": "Adaptive Models",
-      "description": "Smart routing - escalates complex features to Opus automatically."
-    },
-    {
-      "label": "Approval Workflow",
-      "description": "Human-in-the-loop - pauses for high-risk operations like DB migrations."
-    }
-  ],
-  "multiSelect": true
-}
-```
+  - question: "Enable parallel execution for faster completion?" (only if HAS_PLAN=true)
+    header: "Execution"
+    multiSelect: false
+    options:
+      - label: "Parallel (Recommended)"
+        description: "2-4x faster - launches multiple workers for independent features. Uses git-isolated branches."
+      - label: "Sequential"
+        description: "One feature at a time - safer for tightly coupled features or first-time testing."
+
+  - question: "Which advanced features should be enabled?"
+    header: "Features"
+    multiSelect: true
+    options:
+      - label: "Semantic Memory"
+        description: "Cross-project learning - suggests solutions from past successful implementations."
+      - label: "Adaptive Models"
+        description: "Smart routing - escalates complex features to Opus automatically."
+      - label: "Approval Workflow"
+        description: "Human-in-the-loop - pauses for high-risk operations like DB migrations."
 
 ## Step 4: Create Configuration
 
