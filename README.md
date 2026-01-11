@@ -1,6 +1,6 @@
 # SDK Bridge Marketplace
 
-**Version 1.8.1** - Bridge Claude Code CLI with the Claude Agent SDK for long-running autonomous development tasks.
+**Version 1.9.0** - Bridge Claude Code CLI with the Claude Agent SDK for long-running autonomous development tasks.
 
 ## Overview
 
@@ -84,18 +84,30 @@ This marketplace provides the **sdk-bridge** plugin, which enables seamless hand
 # Shows estimated speedup from parallelization
 ```
 
-### 5. Hand Off to SDK
+### 5. Enable Parallel Mode (Optional - If Recommended)
+
+```bash
+/sdk-bridge:enable-parallel
+# Validates execution plan exists
+# Updates config to enable parallel execution
+# Shows estimated speedup and next steps
+# Enables multi-worker parallel mode
+```
+
+### 6. Hand Off to SDK
 
 ```bash
 /sdk-bridge:handoff
 # Validates prerequisites
+# Auto-detects parallel vs sequential mode
 # Launches SDK agent in background with hybrid loops
 # Uses semantic memory for learning from past projects
 # Adaptive model selection (Sonnet for standard, Opus for complex/risky)
+# Parallel mode: Launches multiple workers with git-isolated branches
 # You can close CLI - agent continues working
 ```
 
-### 6. Monitor Progress (Optional)
+### 7. Monitor Progress (Optional)
 
 ```bash
 /sdk-bridge:status
@@ -103,11 +115,11 @@ This marketplace provides the **sdk-bridge** plugin, which enables seamless hand
 # View session count, feature completion
 
 /sdk-bridge:observe
-# Real-time dashboard with live worker status
+# Real-time dashboard with live worker status (parallel mode)
 # Shows current session, progress bars, recent activity
 ```
 
-### 7. Approve High-Risk Operations (If Prompted)
+### 8. Approve High-Risk Operations (If Prompted)
 
 ```bash
 /sdk-bridge:approve
@@ -116,7 +128,7 @@ This marketplace provides the **sdk-bridge** plugin, which enables seamless hand
 # Non-blocking - other features continue while waiting
 ```
 
-### 8. Resume When Complete
+### 9. Resume When Complete
 
 ```bash
 /sdk-bridge:resume
@@ -131,11 +143,12 @@ This marketplace provides the **sdk-bridge** plugin, which enables seamless hand
 | Command | Description |
 |---------|-------------|
 | `/sdk-bridge:lra-setup` | Install 7 harness scripts (first-time setup) |
-| `/sdk-bridge:init` | Initialize project for SDK bridge |
+| `/sdk-bridge:init` | Initialize project for SDK bridge with parallel config |
 | `/sdk-bridge:plan` | Analyze dependencies and create parallel execution plan |
-| `/sdk-bridge:handoff` | Launch autonomous SDK agent with hybrid loops |
+| `/sdk-bridge:enable-parallel` | Enable parallel execution mode (after plan) |
+| `/sdk-bridge:handoff` | Launch autonomous SDK agent (auto-detects mode) |
 | `/sdk-bridge:approve` | Approve pending high-risk operations |
-| `/sdk-bridge:observe` | Real-time dashboard with live progress |
+| `/sdk-bridge:observe` | Real-time dashboard with live progress (parallel mode) |
 | `/sdk-bridge:status` | Check progress and session count |
 | `/sdk-bridge:resume` | Return to CLI with completion report & file validation |
 | `/sdk-bridge:cancel` | Stop running SDK agent |
@@ -183,15 +196,17 @@ Combines **same-session self-healing** (Ralph Wiggum pattern) with **multi-sessi
 - `/sdk-bridge:approve` to review and decide
 - Disable: `enable_approval_nodes: false`
 
-### Parallel Execution (v2.0 Phase 3)
+### Parallel Execution (v2.0 Phase 3 - COMPLETE)
 
-**Dependency-aware parallel implementation**:
+**Dependency-aware parallel implementation** (fully integrated in v1.9.0):
 
 - Automatic dependency detection (explicit + implicit)
-- Git-isolated workers (separate branches)
-- Critical path analysis
-- Estimated speedup calculation
-- Use `/sdk-bridge:plan` to analyze and enable
+- Git-isolated workers (separate branches per feature)
+- Critical path analysis for bottleneck identification
+- Estimated speedup calculation (2-4x typical)
+- Multi-worker orchestration with automatic merge coordination
+- Workflow: `/sdk-bridge:plan` → `/sdk-bridge:enable-parallel` → `/sdk-bridge:handoff`
+- Monitor with: `/sdk-bridge:observe` (real-time worker dashboard)
 
 ### File Validation (v1.8.1)
 
@@ -247,6 +262,10 @@ enable_semantic_memory: true                # Cross-project learning
 enable_adaptive_models: true                # Smart Sonnet/Opus routing
 enable_approval_nodes: true                 # Human-in-the-loop for high-risk ops
 max_inner_loops: 5                          # Same-session retries (hybrid loops)
+
+# Phase 3: Parallel Execution (v1.9.0)
+enable_parallel_execution: false            # Opt-in after /plan + /enable-parallel
+max_parallel_workers: 3                     # 2-4 recommended for parallel mode
 ---
 ```
 
@@ -257,6 +276,8 @@ max_inner_loops: 5                          # Same-session retries (hybrid loops
 - **Hybrid Loops**: Set `max_inner_loops: 3-7` for optimal balance
 - **Semantic Memory**: Learns across all projects, improves over time
 - **Approvals**: Only for high-risk operations (database, API, architecture)
+- **Parallel Execution**: Run `/sdk-bridge:plan` first, then `/sdk-bridge:enable-parallel` if recommended
+- **Parallel Workers**: 2-4 workers optimal (each uses API tokens and git branches)
 
 ## Architecture
 
@@ -302,7 +323,18 @@ The plugin includes comprehensive documentation:
 
 ## Recent Releases
 
-### v1.8.1 (Current) - File Validation Fix
+### v1.9.0 (Current) - Phase 3 Complete: Parallel Execution 🎉
+- **MILESTONE**: All v2.0 phases now fully implemented and functional!
+- New command: `/sdk-bridge:enable-parallel` - Enable multi-worker parallel mode
+- Enhanced `/sdk-bridge:handoff` - Auto-detects parallel vs sequential mode
+- Enhanced `/sdk-bridge:init` - Added parallel execution config flags
+- Parallel execution: 2-4x speedup for independent features
+- Git-isolated branches per worker (safe parallel execution)
+- Automatic dependency detection and level-based execution
+- Graceful fallback to sequential if no execution plan
+- 10 commands total (was 9)
+
+### v1.8.1 - File Validation Fix
 - Added deliverable file validation to resume command
 - No more phantom completions - verifies files actually exist
 - Clear ✅/❌ status for each deliverable
@@ -320,13 +352,13 @@ The plugin includes comprehensive documentation:
 - Added module import validation
 - All advanced features now functional
 
-### v1.7.0 - v2.0 Features (Phases 1-3)
+### v1.7.0 - v2.0 Features (Phases 1-2 Initial)
 - Hybrid loops with same-session self-healing
 - Semantic memory with cross-project learning
 - Adaptive model selection (Sonnet/Opus routing)
 - Approval workflow for high-risk operations
-- Parallel execution with dependency graphs
-- Multi-worker orchestration
+- Dependency graph analysis (Phase 3 foundation)
+- Note: Phase 3 parallel execution completed in v1.9.0
 
 ## Support
 

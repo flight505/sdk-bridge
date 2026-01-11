@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Current Version: v1.8.1** | Last Updated: 2026-01-11
+**Current Version: v1.9.0** | Last Updated: 2026-01-11
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a **Claude Code plugin marketplace** containing the `sdk-bridge` plugin. The plugin bridges Claude Code CLI with the Claude Agent SDK for long-running autonomous development tasks, implementing Anthropic's two-agent harness pattern.
 
-**Key Note**: As of v1.8.0, all commands use v2.0 implementations as THE standard (not alternatives). Advanced features (hybrid loops, semantic memory, adaptive models, approvals, parallel execution) are enabled by default.
+**Key Note**: As of v1.9.0, **all v2.0 phases are COMPLETE and fully functional**. Advanced features (hybrid loops, semantic memory, adaptive models, approvals, **parallel execution**) are available. Parallel execution is opt-in via `/sdk-bridge:plan` → `/sdk-bridge:enable-parallel` workflow.
 
 ## Critical Learning: Plugin Discovery System
 
@@ -106,7 +106,7 @@ sdk-bridge-marketplace/
 │   └── sdk-bridge/               # The actual plugin
 │       ├── .claude-plugin/
 │       │   └── plugin.json       # Plugin manifest
-│       ├── commands/             # 9 slash commands (lra-setup, init, plan, handoff, approve, observe, status, resume, cancel)
+│       ├── commands/             # 10 slash commands (lra-setup, init, plan, enable-parallel, handoff, approve, observe, status, resume, cancel)
 │       ├── agents/               # 2 validation agents (handoff-validator, completion-reviewer)
 │       ├── hooks/                # SessionStart and Stop event handlers
 │       ├── scripts/              # Bundled harness + utilities (autonomous_agent.py, launch-harness.sh, etc.)
@@ -264,13 +264,14 @@ The plugin uses file-based state sharing between CLI and SDK:
 
 **State File Lifecycle**:
 0. User runs `/sdk-bridge:lra-setup` (first time only) → installs 7 harness scripts to `~/.claude/skills/`
-1. User runs `/sdk-bridge:init` → creates `sdk-bridge.local.md` with advanced feature flags
+1. User runs `/sdk-bridge:init` → creates `sdk-bridge.local.md` with advanced feature flags and parallel config
 2. User runs `/sdk-bridge:plan` (optional) → creates `feature-graph.json`, `execution-plan.json` for parallel execution
-3. User runs `/sdk-bridge:handoff` → creates `handoff-context.json`, `sdk-bridge.pid`, `sdk-bridge.log`
-4. SDK runs with hybrid loops → updates `feature_list.json`, appends to `claude-progress.txt`, uses semantic memory
-5. User runs `/sdk-bridge:approve` (if high-risk operations detected) → reviews and approves pending operations
-6. SDK completes → creates `sdk_complete.json`
-7. User runs `/sdk-bridge:resume` → reads all state files, validates deliverable files exist, generates report, archives completion signal
+3. User runs `/sdk-bridge:enable-parallel` (optional) → sets `enable_parallel_execution: true` in config
+4. User runs `/sdk-bridge:handoff` → auto-detects parallel vs sequential mode, creates `handoff-context.json`, `sdk-bridge.pid`, `sdk-bridge.log`
+5. SDK runs (parallel or sequential) → updates `feature_list.json`, appends to `claude-progress.txt`, uses semantic memory
+6. User runs `/sdk-bridge:approve` (if high-risk operations detected) → reviews and approves pending operations
+7. SDK completes → creates `sdk_complete.json` (parallel mode also creates `worker-sessions.json`)
+8. User runs `/sdk-bridge:resume` → reads all state files, validates deliverable files exist, generates report, archives completion signal
 
 ### Integration Points
 
@@ -278,14 +279,31 @@ The plugin uses file-based state sharing between CLI and SDK:
 - Plugin bundles 7 harness scripts in `scripts/` (v1.4.0 + v2.0 complete set)
 - `/sdk-bridge:lra-setup` installs all 7 scripts to `~/.claude/skills/long-running-agent/harness/`
 - No external dependencies - plugin is fully self-contained
-- `/sdk-bridge:handoff` uses `hybrid_loop_agent.py` by default (v2.0 standard)
-- `launch-harness.sh` translates plugin config to harness CLI args:
+- `/sdk-bridge:handoff` **auto-detects execution mode** (v1.9.0+):
+  - **Sequential mode** (default): Uses `hybrid_loop_agent.py`
+  - **Parallel mode** (if enabled): Uses `parallel_coordinator.py`
+  - Detection: Checks `enable_parallel_execution` flag + `execution-plan.json` existence
+  - Graceful fallback to sequential if no plan found
+- Different CLI args per mode:
+  - Sequential: `--max-iterations`, `--max-inner-loops`
+  - Parallel: `--max-workers`, `--execution-plan`
   ```bash
+  # Sequential mode
   nohup python3 "$HARNESS" \
     --project-dir "$PROJECT_DIR" \
     --model "$MODEL" \
     --max-iterations "$MAX_ITERATIONS" \
     --max-inner-loops "$MAX_INNER" \
+    --log-level "$LOG_LEVEL" \
+    > "$LOG_FILE" 2>&1 &
+
+  # Parallel mode
+  nohup python3 "$HARNESS" \
+    --project-dir "$PROJECT_DIR" \
+    --model "$MODEL" \
+    --max-workers "$MAX_WORKERS" \
+    --max-sessions "$MAX_SESSIONS" \
+    --execution-plan .claude/execution-plan.json \
     --log-level "$LOG_LEVEL" \
     > "$LOG_FILE" 2>&1 &
   ```
@@ -451,6 +469,36 @@ skills/skill-name/
 4. Add example to configuration.md
 5. Update `.claude/sdk-bridge.local.md` template in init command
 
+### Integrating New Execution Mode (Example: Phase 3 Parallel Execution)
+
+This is how Phase 3 parallel execution was integrated in v1.9.0:
+
+1. **Add Config Flags** (init.md):
+   ```yaml
+   enable_parallel_execution: false
+   max_parallel_workers: 3
+   ```
+
+2. **Create Enable Command** (enable-parallel.md):
+   - Validates execution-plan.json exists
+   - Updates config flag to true
+   - Shows estimated speedup
+
+3. **Update Handoff Command** (handoff.md):
+   - Detect parallel mode: Check flag + plan file existence
+   - Choose harness: `parallel_coordinator.py` vs `hybrid_loop_agent.py`
+   - Different CLI args per mode
+   - Graceful fallback if no plan
+
+4. **Update Manifests**:
+   - Add command to marketplace.json
+   - Bump version
+
+5. **Test Integration**:
+   - Config parsing
+   - Mode detection
+   - Fallback behavior
+
 ### Debugging Plugin Issues
 
 **Commands not appearing**:
@@ -610,7 +658,20 @@ Based on analysis of existing marketplaces (claude-code-workflows):
 
 ## Recent Releases
 
-### v1.8.1 (Current) - File Validation Fix (2026-01-11)
+### v1.9.0 (Current) - Phase 3 Complete: Parallel Execution (2026-01-11)
+- **MILESTONE**: All v2.0 phases (1-3) now fully implemented and functional
+- **New Command**: `/sdk-bridge:enable-parallel` - Validates plan and enables parallel mode
+- **Enhanced**: `/sdk-bridge:handoff` - Auto-detects parallel vs sequential mode
+- **Enhanced**: `/sdk-bridge:init` - Added `enable_parallel_execution` and `max_parallel_workers` flags
+- **Feature**: Parallel execution with 2-4x speedup for independent features
+- **Feature**: Multi-worker orchestration with git-isolated branches
+- **Feature**: Automatic dependency detection and level-based execution
+- **Integration**: Seamless fallback to sequential if no execution plan
+- **Commands**: 10 total (was 9)
+- **Commits**: 1f9c173
+- **Files**: 5 changed, 337 insertions(+), 44 deletions(-)
+
+### v1.8.1 - File Validation Fix (2026-01-11)
 - **Fix**: Added deliverable file validation to `/sdk-bridge:resume` command
 - **Impact**: No more phantom completions - verifies files actually exist in working directory
 - **Features**: Shows ✅/❌ status for each file, troubleshooting guidance for missing files
@@ -645,10 +706,11 @@ Based on analysis of existing marketplaces (claude-code-workflows):
 
 | Version | Date | Type | Key Changes |
 |---------|------|------|-------------|
+| v1.9.0 | 2026-01-11 | Major | **Phase 3 complete - Parallel execution fully integrated** |
 | v1.8.1 | 2026-01-11 | Bugfix | File validation in resume command |
 | v1.8.0 | 2026-01-11 | Major | Command consolidation (remove -v2 suffixes) |
 | v1.7.1 | 2026-01-10 | Bugfix | Fix installation (all 7 scripts) |
-| v1.7.0 | 2026-01-08 | Major | v2.0 features (Phases 1-3) |
+| v1.7.0 | 2026-01-08 | Major | v2.0 features (Phases 1-2, Phase 3 foundation) |
 | v1.6.0 | 2025-12-20 | Feature | Enhanced state management |
 | v1.5.0 | 2025-12-15 | Feature | Validation agents |
 | v1.4.0 | 2025-12-10 | Major | Core harness implementation |
