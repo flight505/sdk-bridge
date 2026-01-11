@@ -5,15 +5,15 @@
     "url": "https://github.com/flight505"
   },
   "metadata": {
-    "description": "Bridge Claude Code CLI with Agent SDK for long-running autonomous development tasks",
-    "version": "1.9.0"
+    "description": "SOTA autonomous development with intelligent UX: proactive setup, live progress, context-aware guidance",
+    "version": "2.0.0"
   },
   "plugins": [
     {
       "name": "sdk-bridge",
       "source": "./plugins/sdk-bridge",
-      "description": "SOTA autonomous development plugin: hybrid loops, semantic memory, parallel execution, adaptive intelligence",
-      "version": "1.9.0",
+      "description": "SOTA autonomous development with generative UI: interactive setup, live progress, intelligent resume, context-aware help",
+      "version": "2.0.0",
       "author": {
         "name": "flight505",
         "url": "https://github.com/flight505"
@@ -32,16 +32,18 @@
       "category": "workflows",
       "strict": true,
       "commands": [
-        "./commands/init.md",
         "./commands/lra-setup.md",
+        "./commands/start.md",
+        "./commands/watch.md",
+        "./commands/status.md",
+        "./commands/resume.md",
+        "./commands/cancel.md",
+        "./commands/init.md",
         "./commands/handoff.md",
         "./commands/plan.md",
         "./commands/enable-parallel.md",
         "./commands/approve.md",
-        "./commands/observe.md",
-        "./commands/status.md",
-        "./commands/resume.md",
-        "./commands/cancel.md"
+        "./commands/observe.md"
       ],
       "agents": [
         "./agents/handoff-validator.md",
