@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Bridge Claude Code CLI with Agent SDK for long-running autonomous development tasks",
-    "version": "1.8.0"
+    "version": "1.8.1"
   },
   "plugins": [
     {
       "name": "sdk-bridge",
       "source": "./plugins/sdk-bridge",
       "description": "SOTA autonomous development plugin: hybrid loops, semantic memory, parallel execution, adaptive intelligence",
-      "version": "1.8.0",
+      "version": "1.8.1",
       "author": {
         "name": "flight505",
         "url": "https://github.com/flight505"
