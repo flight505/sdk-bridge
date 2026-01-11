@@ -1,10 +1,14 @@
 # CLAUDE.md
 
+**Current Version: v1.8.1** | Last Updated: 2026-01-11
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Repository Purpose
 
 This is a **Claude Code plugin marketplace** containing the `sdk-bridge` plugin. The plugin bridges Claude Code CLI with the Claude Agent SDK for long-running autonomous development tasks, implementing Anthropic's two-agent harness pattern.
+
+**Key Note**: As of v1.8.0, all commands use v2.0 implementations as THE standard (not alternatives). Advanced features (hybrid loops, semantic memory, adaptive models, approvals, parallel execution) are enabled by default.
 
 ## Critical Learning: Plugin Discovery System
 
@@ -102,7 +106,7 @@ sdk-bridge-marketplace/
 │   └── sdk-bridge/               # The actual plugin
 │       ├── .claude-plugin/
 │       │   └── plugin.json       # Plugin manifest
-│       ├── commands/             # 6 slash commands (lra-setup, init, handoff, status, resume, cancel)
+│       ├── commands/             # 9 slash commands (lra-setup, init, plan, handoff, approve, observe, status, resume, cancel)
 │       ├── agents/               # 2 validation agents (handoff-validator, completion-reviewer)
 │       ├── hooks/                # SessionStart and Stop event handlers
 │       ├── scripts/              # Bundled harness + utilities (autonomous_agent.py, launch-harness.sh, etc.)
@@ -155,19 +159,62 @@ Claude Code auto-discovers components from standard directories:
 - Format similar to commands but with agent-specific frontmatter
 
 **Scripts** (`scripts/`):
-- `autonomous_agent.py`: **Bundled harness** - self-contained Python script that loops through features
+
+*Core Harness Scripts (7 files installed via `/sdk-bridge:lra-setup`)*:
+
+- `autonomous_agent.py` (v1.4.0): Original harness - multi-session loop implementation
   - Uses Claude Agent SDK for programmatic Claude control
   - Reads `feature_list.json`, implements features one by one
   - Updates `passes` field, commits after each feature
   - Creates `sdk_complete.json` on completion
-  - Installed to `~/.claude/skills/long-running-agent/harness/` via `/sdk-bridge:lra-setup`
+
+- `hybrid_loop_agent.py` (v2.0 Phase 1): **Default harness** - combines same-session self-healing with multi-session progression
+  - Ralph Wiggum pattern: Fast inner loops for simple fixes (no API overhead)
+  - Automatically escalates to new session when stuck
+  - Reduces costs by up to 60% compared to autonomous_agent.py
+  - Used by default in `/sdk-bridge:handoff` command
+
+- `semantic_memory.py` (v2.0 Phase 1): Cross-project learning system
+  - SQLite database of past successful implementations
+  - Feature similarity matching using TF-IDF
+  - Suggests proven solutions from other projects
+  - Learns continuously across all user projects
+
+- `model_selector.py` (v2.0 Phase 2): Adaptive Sonnet/Opus routing
+  - Complexity analysis (LOC, dependencies, scope)
+  - Risk assessment (architectural changes, data migrations, security)
+  - Performance tracking (past failures trigger Opus escalation)
+  - Cost optimization (Sonnet for 90% of standard work)
+
+- `approval_system.py` (v2.0 Phase 2): Human-in-the-loop workflow
+  - Risk assessment for high-impact operations
+  - Pauses for database migrations, API changes, architectural refactors
+  - Presents alternatives with impact analysis
+  - Non-blocking - other features continue while waiting for approval
+
+- `dependency_graph.py` (v2.0 Phase 3): Parallel execution planning
+  - Automatic dependency detection (explicit + implicit)
+  - Builds directed acyclic graph (DAG) of features
+  - Critical path analysis for bottleneck identification
+  - Execution level planning for parallel workers
+
+- `parallel_coordinator.py` (v2.0 Phase 3): Multi-worker orchestration
+  - Git-isolated workers (separate branches per feature)
+  - Concurrent execution of independent features
+  - Merge coordination and conflict resolution
+  - Progress aggregation and reporting
+
+*Helper Scripts*:
+
 - `launch-harness.sh`: Launches the harness with nohup
   - Reads `.claude/sdk-bridge.local.md` for configuration
-  - Parses YAML frontmatter to extract model, max_sessions
+  - Parses YAML frontmatter to extract model, max_sessions, advanced feature flags
   - Calculates max_iterations = max_sessions - reserve_sessions
   - Redirects output to `.claude/sdk-bridge.log`
   - Saves PID to `.claude/sdk-bridge.pid`
+
 - `monitor-progress.sh`: Updates handoff-context.json, detects completion
+
 - `parse-state.sh`: Parses and validates JSON state files
 
 **Hooks** (`hooks/hooks.json` + `hooks/scripts/*.sh`):
@@ -216,25 +263,30 @@ The plugin uses file-based state sharing between CLI and SDK:
 - `init.sh`: Environment bootstrap script (executed before each SDK session)
 
 **State File Lifecycle**:
-0. User runs `/sdk-bridge:lra-setup` (first time only) → installs harness to `~/.claude/skills/`
-1. User runs `/sdk-bridge:init` → creates `sdk-bridge.local.md`
-2. User runs `/sdk-bridge:handoff` → creates `handoff-context.json`, `sdk-bridge.pid`, `sdk-bridge.log`
-3. SDK runs → updates `feature_list.json`, appends to `claude-progress.txt`
-4. SDK completes → creates `sdk_complete.json`
-5. User runs `/sdk-bridge:resume` → reads all state files, generates report, archives completion signal
+0. User runs `/sdk-bridge:lra-setup` (first time only) → installs 7 harness scripts to `~/.claude/skills/`
+1. User runs `/sdk-bridge:init` → creates `sdk-bridge.local.md` with advanced feature flags
+2. User runs `/sdk-bridge:plan` (optional) → creates `feature-graph.json`, `execution-plan.json` for parallel execution
+3. User runs `/sdk-bridge:handoff` → creates `handoff-context.json`, `sdk-bridge.pid`, `sdk-bridge.log`
+4. SDK runs with hybrid loops → updates `feature_list.json`, appends to `claude-progress.txt`, uses semantic memory
+5. User runs `/sdk-bridge:approve` (if high-risk operations detected) → reviews and approves pending operations
+6. SDK completes → creates `sdk_complete.json`
+7. User runs `/sdk-bridge:resume` → reads all state files, validates deliverable files exist, generates report, archives completion signal
 
 ### Integration Points
 
 **Self-Contained Harness**:
-- Plugin bundles its own `autonomous_agent.py` in `scripts/`
-- `/sdk-bridge:lra-setup` installs it to `~/.claude/skills/long-running-agent/harness/`
+- Plugin bundles 7 harness scripts in `scripts/` (v1.4.0 + v2.0 complete set)
+- `/sdk-bridge:lra-setup` installs all 7 scripts to `~/.claude/skills/long-running-agent/harness/`
 - No external dependencies - plugin is fully self-contained
+- `/sdk-bridge:handoff` uses `hybrid_loop_agent.py` by default (v2.0 standard)
 - `launch-harness.sh` translates plugin config to harness CLI args:
   ```bash
   nohup python3 "$HARNESS" \
     --project-dir "$PROJECT_DIR" \
     --model "$MODEL" \
     --max-iterations "$MAX_ITERATIONS" \
+    --max-inner-loops "$MAX_INNER" \
+    --log-level "$LOG_LEVEL" \
     > "$LOG_FILE" 2>&1 &
   ```
 
@@ -555,3 +607,48 @@ Based on analysis of existing marketplaces (claude-code-workflows):
 - Relative paths in manifests: `./commands/file.md`
 - ${CLAUDE_PLUGIN_ROOT} in hooks and commands
 - Absolute paths in bash scripts: `$HOME/.claude/...`
+
+## Recent Releases
+
+### v1.8.1 (Current) - File Validation Fix (2026-01-11)
+- **Fix**: Added deliverable file validation to `/sdk-bridge:resume` command
+- **Impact**: No more phantom completions - verifies files actually exist in working directory
+- **Features**: Shows ✅/❌ status for each file, troubleshooting guidance for missing files
+- **Supports**: 15+ file extensions (py, js, ts, md, json, yaml, sh, sql, html, css, etc.)
+- **Commit**: 771b804
+
+### v1.8.0 - Command Consolidation (2026-01-11)
+- **Change**: Upgraded all commands to v2.0 standard (removed confusing -v2 suffixes)
+- **Commands**: handoff-v2.md → handoff.md, plan-v2.md → plan.md
+- **Deleted**: Deprecated handoff-v2.md (functionality merged into handoff.md)
+- **Impact**: Simplified from 10 to 9 commands for cleaner UX
+- **Result**: v2.0 features now THE standard (not alternatives)
+- **Commit**: 626fbb0
+
+### v1.7.1 - Installation Fix (2026-01-10)
+- **Fix**: Critical bug - now installs all 7 v2.0 scripts (was only installing 1 of 7)
+- **Scripts**: autonomous_agent.py, hybrid_loop_agent.py, semantic_memory.py, model_selector.py, approval_system.py, dependency_graph.py, parallel_coordinator.py
+- **Added**: Module import validation to verify scripts load correctly
+- **Impact**: All advanced features now functional for users
+- **Commit**: f7d18af
+
+### v1.7.0 - v2.0 Features (Phases 1-3)
+- **Phase 1**: Hybrid loops with same-session self-healing (Ralph Wiggum pattern)
+- **Phase 1**: Semantic memory with cross-project learning (SQLite-based)
+- **Phase 2**: Adaptive model selection (Sonnet/Opus routing)
+- **Phase 2**: Approval workflow for high-risk operations
+- **Phase 3**: Parallel execution with dependency graphs
+- **Phase 3**: Multi-worker orchestration with git isolation
+- **Result**: Complete SOTA autonomous development platform
+
+## Version History Summary
+
+| Version | Date | Type | Key Changes |
+|---------|------|------|-------------|
+| v1.8.1 | 2026-01-11 | Bugfix | File validation in resume command |
+| v1.8.0 | 2026-01-11 | Major | Command consolidation (remove -v2 suffixes) |
+| v1.7.1 | 2026-01-10 | Bugfix | Fix installation (all 7 scripts) |
+| v1.7.0 | 2026-01-08 | Major | v2.0 features (Phases 1-3) |
+| v1.6.0 | 2025-12-20 | Feature | Enhanced state management |
+| v1.5.0 | 2025-12-15 | Feature | Validation agents |
+| v1.4.0 | 2025-12-10 | Major | Core harness implementation |
