@@ -1,3 +1,5 @@
+![SDK Bridge Hero](./hero.png)
+
 # SDK Bridge Marketplace
 
 **Version 1.9.0** - Bridge Claude Code CLI with the Claude Agent SDK for long-running autonomous development tasks.
