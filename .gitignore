@@ -8,3 +8,7 @@ __pycache__/
 *.swp
 *.swo
 *~
+
+# Hero image backups
+hero-original.png
+hero.png

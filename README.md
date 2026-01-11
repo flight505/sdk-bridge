@@ -1,4 +1,4 @@
-![SDK Bridge Hero](./hero.png)
+![SDK Bridge Hero](./hero.jpg)
 
 # SDK Bridge Marketplace
 
