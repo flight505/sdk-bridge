@@ -1,157 +1,288 @@
 ---
-description: "Start autonomous development with guided setup"
+description: "Start autonomous development (auto-installs if needed)"
 argument-hint: ""
 allowed-tools: ["Bash", "Read", "Write", "AskUserQuestion", "TodoWrite", "Task"]
 ---
 
-# Start SDK Bridge Autonomous Development
+# Start SDK Bridge - One Command Setup
 
-I'll set up and launch SDK Bridge with an interactive guided experience.
+I'll set up and launch SDK Bridge with automatic installation and a clean interactive experience.
 
-## Step 1: Check Prerequisites
+## Phase 0: Silent Setup Detection
 
-Let me verify the environment is ready:
+First, let me check if SDK Bridge is installed and up to date:
 
 ```bash
-# Create .claude directory if needed
-mkdir -p .claude
+# Check installation status silently
+HARNESS_DIR="$HOME/.claude/skills/long-running-agent/harness"
+VERSION_FILE="$HARNESS_DIR/.version"
+PLUGIN_VERSION="2.0.0"
+NEEDS_INSTALL="false"
+NEEDS_UPDATE="false"
 
-# Check harness
-if [ ! -f ~/.claude/skills/long-running-agent/harness/hybrid_loop_agent.py ]; then
-  echo "❌ ERROR: Harness not installed"
-  echo ""
-  echo "Install harness first: /sdk-bridge:lra-setup"
-  exit 1
+# Check if harness exists
+if [ ! -d "$HARNESS_DIR" ] || [ ! -f "$HARNESS_DIR/hybrid_loop_agent.py" ]; then
+  NEEDS_INSTALL="true"
+  echo "SETUP_REQUIRED"
+elif [ -f "$VERSION_FILE" ]; then
+  INSTALLED_VERSION=$(cat "$VERSION_FILE")
+  if [ "$INSTALLED_VERSION" != "$PLUGIN_VERSION" ]; then
+    NEEDS_UPDATE="true"
+    echo "UPDATE_AVAILABLE"
+  else
+    echo "UP_TO_DATE"
+  fi
+else
+  # Version file missing - assume needs update
+  NEEDS_UPDATE="true"
+  echo "UPDATE_AVAILABLE"
 fi
-
-# Check venv
-VENV_PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
-if [ ! -f "$VENV_PYTHON" ]; then
-  echo "❌ ERROR: SDK virtual environment not found"
-  echo "Run /sdk-bridge:lra-setup first"
-  exit 1
-fi
-
-# Check SDK installed
-if ! "$VENV_PYTHON" -c "import claude_agent_sdk" 2>/dev/null; then
-  echo "❌ ERROR: claude-agent-sdk not installed"
-  echo "Run /sdk-bridge:lra-setup first"
-  exit 1
-fi
-
-# Check feature list
-if [ ! -f "feature_list.json" ]; then
-  echo "❌ ERROR: No feature_list.json found"
-  echo ""
-  echo "Create feature_list.json first with /plan or manually"
-  exit 1
-fi
-
-# Check git
-if ! command -v git &> /dev/null; then
-  echo "⚠️  WARNING: git not found (recommended)"
-fi
-
-echo "✅ All prerequisites met"
 ```
 
-## Step 2: Initial Progress Setup
+## Phase 0.5: Auto-Install/Update (Silent Background)
 
-Use TodoWrite to show we're starting:
+If setup is required, use TodoWrite to show clean progress and install silently:
+
+**If SETUP_REQUIRED or UPDATE_AVAILABLE**, create initial progress tracker:
 
 ```
-Create initial progress tracker:
-- ✅ Prerequisites validated
+Use TodoWrite to create:
+- ⏳ Installing SDK Bridge harness
+- ⏳ Setting up Python environment
+- ⏳ Validating installation
+- ⏳ Checking project prerequisites
 - ⏳ Configuring setup options
 - ⏳ Creating configuration
-- ⏳ Validating handoff readiness
 - ⏳ Launching autonomous agent
 ```
 
-## Step 3: Interactive Configuration
-
-First, check if execution plan exists to determine available options:
+Then run silent installation:
 
 ```bash
-HAS_PLAN=false
-if [ -f ".claude/execution-plan.json" ]; then
-  HAS_PLAN=true
-  echo "Execution plan found - parallel mode available"
+#!/bin/bash
+set -euo pipefail
+
+SETUP_LOG=".claude/setup.log"
+mkdir -p .claude
+
+# Redirect all output to log file (silent for user)
+exec 1>>"$SETUP_LOG" 2>&1
+
+echo "[$(date)] Starting SDK Bridge installation..."
+
+# === STEP 1: Create Directories ===
+mkdir -p "$HOME/.claude/skills/long-running-agent/harness"
+
+# === STEP 2: Install Harness Scripts ===
+SCRIPTS=(
+  "autonomous_agent.py"
+  "hybrid_loop_agent.py"
+  "semantic_memory.py"
+  "model_selector.py"
+  "approval_system.py"
+  "dependency_graph.py"
+  "parallel_coordinator.py"
+)
+
+for script in "${SCRIPTS[@]}"; do
+  src="${CLAUDE_PLUGIN_ROOT}/scripts/$script"
+  dst="$HOME/.claude/skills/long-running-agent/harness/$script"
+
+  if [ -f "$src" ]; then
+    cp "$src" "$dst"
+    chmod +x "$dst"
+  fi
+done
+
+# === STEP 3: Create Virtual Environment ===
+VENV_DIR="$HOME/.claude/skills/long-running-agent/.venv"
+
+if [ ! -d "$VENV_DIR" ]; then
+  if command -v uv &> /dev/null; then
+    uv venv "$VENV_DIR"
+  else
+    python3 -m venv "$VENV_DIR"
+  fi
 fi
+
+# === STEP 4: Install SDK ===
+. "$VENV_DIR/bin/activate"
+
+if command -v uv &> /dev/null; then
+  uv pip install --quiet claude-agent-sdk
+else
+  pip install --quiet claude-agent-sdk
+fi
+
+deactivate
+
+# === STEP 5: Write Version File ===
+echo "2.0.0" > "$HOME/.claude/skills/long-running-agent/harness/.version"
+
+# === STEP 6: Validate Installation ===
+VENV_PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
+SDK_VERSION=$("$VENV_PYTHON" -c "import claude_agent_sdk; print(claude_agent_sdk.__version__)" 2>&1)
+
+echo "[$(date)] Installation complete. SDK version: $SDK_VERSION"
+
+# Signal success
+echo "INSTALL_SUCCESS"
 ```
 
-**Use the AskUserQuestion tool now** to present an interactive configuration menu to the user.
+After installation completes, update TodoWrite:
 
-Build the questions array dynamically:
-- If HAS_PLAN=true: Ask all 3 questions
-- If HAS_PLAN=false: Ask only questions 1 and 3 (skip execution mode question)
+```
+- ✅ SDK Bridge harness installed
+- ✅ Python environment ready
+- ✅ Installation validated
+- ⏳ Checking project prerequisites
+- ⏳ Configuring setup options
+- ⏳ Creating configuration
+- ⏳ Launching autonomous agent
+```
 
-Structure for the questions parameter:
-  - question: "Which Claude model should the agent use?"
-    header: "Model"
-    multiSelect: false
-    options:
-      - label: "Sonnet (Recommended)"
-        description: "Fast and capable - handles most development tasks efficiently. Best cost/performance ratio."
-      - label: "Opus"
-        description: "Most capable - use for complex refactoring, architecture changes, or when Sonnet struggles."
+**If UP_TO_DATE**, skip to Phase 1 with initial progress tracker:
 
-  - question: "Enable parallel execution for faster completion?" (only if HAS_PLAN=true)
-    header: "Execution"
-    multiSelect: false
-    options:
-      - label: "Parallel (Recommended)"
-        description: "2-4x faster - launches multiple workers for independent features. Uses git-isolated branches."
-      - label: "Sequential"
-        description: "One feature at a time - safer for tightly coupled features or first-time testing."
+```
+Use TodoWrite to create:
+- ⏳ Checking prerequisites
+- ⏳ Configuring setup options
+- ⏳ Creating configuration
+- ⏳ Launching autonomous agent
+```
 
-  - question: "Which advanced features should be enabled?"
-    header: "Features"
-    multiSelect: true
-    options:
-      - label: "Semantic Memory"
-        description: "Cross-project learning - suggests solutions from past successful implementations."
-      - label: "Adaptive Models"
-        description: "Smart routing - escalates complex features to Opus automatically."
-      - label: "Approval Workflow"
-        description: "Human-in-the-loop - pauses for high-risk operations like DB migrations."
+## Phase 1: Project Prerequisites Check
 
-## Step 4: Create Configuration
-
-Based on user answers, create `.claude/sdk-bridge.local.md`:
+Check project-specific requirements (silent checks, only show final status):
 
 ```bash
-# Parse answers
+# All checks silent, only output final status
+{
+  mkdir -p .claude
+
+  # Check feature list
+  if [ ! -f "feature_list.json" ]; then
+    echo "ERROR: No feature_list.json found. Create it with /plan or manually."
+    exit 1
+  fi
+
+  # Check venv and SDK (should exist after Phase 0)
+  VENV_PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
+  if ! "$VENV_PYTHON" -c "import claude_agent_sdk" 2>/dev/null; then
+    echo "ERROR: SDK installation failed. Check .claude/setup.log"
+    exit 1
+  fi
+
+  # Check git (warning only)
+  if ! command -v git &> /dev/null; then
+    echo "WARNING: git not found (recommended for version control)"
+  fi
+
+  echo "PREREQ_OK"
+} 2>/dev/null
+```
+
+Update TodoWrite:
+
+```
+- ✅ Prerequisites validated
+- ⏳ Configuring setup options
+- ⏳ Creating configuration
+- ⏳ Launching autonomous agent
+```
+
+## Phase 2: Interactive Configuration (Clean UI)
+
+Check execution plan availability (silent):
+
+```bash
+HAS_PLAN="false"
+if [ -f ".claude/execution-plan.json" ]; then
+  HAS_PLAN="true"
+fi
+echo "$HAS_PLAN"
+```
+
+**Use the AskUserQuestion tool** to present interactive configuration:
+
+Build questions dynamically based on HAS_PLAN:
+
+**Question 1 (always shown):**
+```
+question: "Which Claude model should the agent use?"
+header: "Model"
+multiSelect: false
+options:
+  - label: "Sonnet (Recommended)"
+    description: "Fast and capable - handles most development tasks efficiently. Best cost/performance ratio."
+  - label: "Opus"
+    description: "Most capable - use for complex refactoring, architecture changes, or when Sonnet struggles."
+```
+
+**Question 2 (only if HAS_PLAN=true):**
+```
+question: "Enable parallel execution for faster completion?"
+header: "Execution"
+multiSelect: false
+options:
+  - label: "Parallel (Recommended)"
+    description: "2-4x faster - launches multiple workers for independent features. Uses git-isolated branches."
+  - label: "Sequential"
+    description: "One feature at a time - safer for tightly coupled features or first-time testing."
+```
+
+**Question 3 (always shown):**
+```
+question: "Which advanced features should be enabled?"
+header: "Features"
+multiSelect: true
+options:
+  - label: "Semantic Memory (Recommended)"
+    description: "Cross-project learning - suggests solutions from past successful implementations."
+  - label: "Adaptive Models (Recommended)"
+    description: "Smart routing - escalates complex features to Opus automatically."
+  - label: "Approval Workflow (Recommended)"
+    description: "Human-in-the-loop - pauses for high-risk operations like DB migrations."
+```
+
+## Phase 3: Create Configuration (Silent)
+
+Parse user answers and create config file:
+
+```bash
+# Parse model selection
 MODEL="claude-sonnet-4-5-20250929"
 if [[ "$MODEL_ANSWER" == *"Opus"* ]]; then
   MODEL="claude-opus-4-5-20251101"
 fi
 
+# Parse execution mode
 ENABLE_PARALLEL="false"
 if [[ "$EXECUTION_ANSWER" == *"Parallel"* ]]; then
   ENABLE_PARALLEL="true"
 fi
 
-ENABLE_MEMORY="true"
-ENABLE_ADAPTIVE="true"
-ENABLE_APPROVAL="true"
+# Parse advanced features (default all enabled)
+ENABLE_MEMORY="false"
+ENABLE_ADAPTIVE="false"
+ENABLE_APPROVAL="false"
 
-if [[ ! "$FEATURES_ANSWER" == *"Semantic Memory"* ]]; then
-  ENABLE_MEMORY="false"
+if [[ "$FEATURES_ANSWER" == *"Semantic Memory"* ]]; then
+  ENABLE_MEMORY="true"
 fi
-if [[ ! "$FEATURES_ANSWER" == *"Adaptive Models"* ]]; then
-  ENABLE_ADAPTIVE="false"
+if [[ "$FEATURES_ANSWER" == *"Adaptive Models"* ]]; then
+  ENABLE_ADAPTIVE="true"
 fi
-if [[ ! "$FEATURES_ANSWER" == *"Approval Workflow"* ]]; then
-  ENABLE_APPROVAL="false"
+if [[ "$FEATURES_ANSWER" == *"Approval Workflow"* ]]; then
+  ENABLE_APPROVAL="true"
 fi
 
-# Create configuration file
-cat > .claude/sdk-bridge.local.md << EOF
+# Create configuration file (silent)
+cat > .claude/sdk-bridge.local.md << 'EOF'
 ---
 # SDK Bridge Configuration
 enabled: true
-model: $MODEL
+model: MODEL_PLACEHOLDER
 max_sessions: 20
 reserve_sessions: 2
 progress_stall_threshold: 3
@@ -161,73 +292,55 @@ webhook_url:
 
 # v2.0 Advanced Features
 enable_v2_features: true
-enable_semantic_memory: $ENABLE_MEMORY
-enable_adaptive_models: $ENABLE_ADAPTIVE
-enable_approval_nodes: $ENABLE_APPROVAL
+enable_semantic_memory: MEMORY_PLACEHOLDER
+enable_adaptive_models: ADAPTIVE_PLACEHOLDER
+enable_approval_nodes: APPROVAL_PLACEHOLDER
 max_inner_loops: 5
 
 # v2.0 Phase 3: Parallel Execution
-enable_parallel_execution: $ENABLE_PARALLEL
+enable_parallel_execution: PARALLEL_PLACEHOLDER
 max_parallel_workers: 3
 ---
 
 # SDK Bridge Configuration
 
-Created by /sdk-bridge:start on $(date +"%Y-%m-%d %H:%M:%S")
+Created by /sdk-bridge:start on TIMESTAMP_PLACEHOLDER
 
 ## Settings
 
-- **Model**: $MODEL
-- **Parallel Execution**: $ENABLE_PARALLEL
-- **Semantic Memory**: $ENABLE_MEMORY
-- **Adaptive Models**: $ENABLE_ADAPTIVE
-- **Approval Workflow**: $ENABLE_APPROVAL
+- **Model**: MODEL_PLACEHOLDER
+- **Parallel Execution**: PARALLEL_PLACEHOLDER
+- **Semantic Memory**: MEMORY_PLACEHOLDER
+- **Adaptive Models**: ADAPTIVE_PLACEHOLDER
+- **Approval Workflow**: APPROVAL_PLACEHOLDER
 
 See CLAUDE.md for detailed configuration documentation.
 EOF
 
-echo "✅ Configuration created"
+# Replace placeholders
+sed -i.bak "s|MODEL_PLACEHOLDER|$MODEL|g" .claude/sdk-bridge.local.md
+sed -i.bak "s|MEMORY_PLACEHOLDER|$ENABLE_MEMORY|g" .claude/sdk-bridge.local.md
+sed -i.bak "s|ADAPTIVE_PLACEHOLDER|$ENABLE_ADAPTIVE|g" .claude/sdk-bridge.local.md
+sed -i.bak "s|APPROVAL_PLACEHOLDER|$ENABLE_APPROVAL|g" .claude/sdk-bridge.local.md
+sed -i.bak "s|PARALLEL_PLACEHOLDER|$ENABLE_PARALLEL|g" .claude/sdk-bridge.local.md
+sed -i.bak "s|TIMESTAMP_PLACEHOLDER|$(date +"%Y-%m-%d %H:%M:%S")|g" .claude/sdk-bridge.local.md
+rm -f .claude/sdk-bridge.local.md.bak
+
+echo "CONFIG_CREATED"
 ```
 
 Update TodoWrite:
+
 ```
 - ✅ Prerequisites validated
 - ✅ Setup options configured
 - ✅ Configuration created
-- ⏳ Validating handoff readiness
 - ⏳ Launching autonomous agent
 ```
 
-## Step 5: Validate Handoff Readiness
+## Phase 4: Launch Agent (Background Process)
 
-Use Task tool to invoke the handoff-validator agent:
-
-```bash
-echo "Validating handoff prerequisites..."
-```
-
-The validator checks:
-1. SDK environment setup
-2. Feature list exists
-3. API authentication
-4. Git repository state
-5. Configuration file
-6. Harness scripts
-
-If validation fails, report errors and stop.
-
-Update TodoWrite:
-```
-- ✅ Prerequisites validated
-- ✅ Setup options configured
-- ✅ Configuration created
-- ✅ Handoff validation passed
-- ⏳ Launching autonomous agent
-```
-
-## Step 6: Launch Autonomous Agent
-
-Read configuration and launch:
+Read configuration and launch harness:
 
 ```bash
 #!/bin/bash
@@ -260,7 +373,7 @@ if [ "$ENABLE_PARALLEL" = "true" ] && [ -f ".claude/execution-plan.json" ]; then
   HARNESS="$HOME/.claude/skills/long-running-agent/harness/parallel_coordinator.py"
 fi
 
-# Create handoff context
+# Create handoff context (silent)
 cat > .claude/handoff-context.json << EOF
 {
   "version": "2.0.0",
@@ -278,7 +391,7 @@ cat > .claude/handoff-context.json << EOF
 }
 EOF
 
-# Build command
+# Build launch command
 if [ "$EXECUTION_MODE" = "parallel" ]; then
   CMD="$PYTHON $HARNESS \
     --project-dir $PROJECT_DIR \
@@ -304,7 +417,7 @@ else
   fi
 fi
 
-# Launch in background
+# Launch in background (silent)
 nohup $CMD > "$LOG_FILE" 2>&1 &
 PID=$!
 echo $PID > "$PID_FILE"
@@ -312,13 +425,12 @@ echo $PID > "$PID_FILE"
 # Verify process started
 sleep 2
 if ! ps -p $PID > /dev/null 2>&1; then
-  echo "❌ Failed to launch SDK Bridge"
-  echo "Check $LOG_FILE for details"
+  echo "ERROR: Failed to launch. Check $LOG_FILE"
   exit 1
 fi
 
 # Count features
-FEATURE_COUNT=$(jq 'length' feature_list.json)
+FEATURE_COUNT=$(jq 'length' feature_list.json 2>/dev/null || echo "0")
 
 # Estimate time
 if [ "$EXECUTION_MODE" = "parallel" ]; then
@@ -327,46 +439,65 @@ else
   ESTIMATED_MIN=$((FEATURE_COUNT * 15))
 fi
 
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "🚀 SDK Bridge Launched Successfully!"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "Configuration:"
-echo "  Mode: $EXECUTION_MODE"
-if [ "$EXECUTION_MODE" = "parallel" ]; then
-  echo "  Workers: $MAX_WORKERS"
-  echo "  Speedup: ~${MAX_WORKERS}x faster"
-fi
-echo "  Model: $MODEL"
-echo "  Features: $FEATURE_COUNT"
-echo ""
-echo "Progress:"
-echo "  PID: $PID"
-echo "  Log file: $LOG_FILE"
-echo "  Estimated time: ~$ESTIMATED_MIN minutes"
-echo ""
-echo "Next Steps:"
-echo "  • Check progress: /sdk-bridge:watch"
-echo "  • View logs: tail -f $LOG_FILE"
-echo "  • Check status: /sdk-bridge:status"
-echo "  • Cancel: /sdk-bridge:cancel"
-echo ""
-echo "I'll notify you when complete (SessionStart hook)"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+# Output structured status for display
+cat << EOF
+LAUNCH_SUCCESS
+PID=$PID
+MODE=$EXECUTION_MODE
+WORKERS=$MAX_WORKERS
+MODEL=$MODEL
+FEATURES=$FEATURE_COUNT
+ESTIMATED_MIN=$ESTIMATED_MIN
+LOG=$LOG_FILE
+EOF
 ```
 
-## Step 7: Final Progress Update
+## Phase 5: Final Status Display
 
-Update TodoWrite to show completion:
+Update TodoWrite to completion:
 
 ```
 - ✅ Prerequisites validated
 - ✅ Setup options configured
 - ✅ Configuration created
-- ✅ Handoff validation passed
-- ✅ Agent launched (PID: 12345)
+- ✅ Agent launched successfully
 ```
 
-Show summary with features enabled, execution mode, estimated completion time, and next steps.
+Display clean success message:
+
+```
+Parse the launch output and display:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 SDK Bridge Running!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Configuration:
+  Mode: [sequential/parallel]
+  [If parallel: Workers: 3, Speedup: ~3x]
+  Model: [model name]
+  Features: [count]
+
+Status:
+  PID: [pid]
+  Estimated time: ~[X] minutes
+
+Monitor Progress:
+  • Live updates: /sdk-bridge:watch
+  • Check status: /sdk-bridge:status
+  • View logs: tail -f .claude/sdk-bridge.log
+  • Cancel: /sdk-bridge:cancel
+
+I'll notify you when complete! ✨
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+## Error Handling
+
+If any phase fails:
+
+1. **Setup fails**: Show "Installation failed. Check .claude/setup.log"
+2. **Prerequisites fail**: Show specific missing item (feature_list.json, SDK, etc.)
+3. **Launch fails**: Show "Failed to start. Check .claude/sdk-bridge.log"
+
+Always maintain clean UI - technical errors go to log files, user sees actionable messages.
