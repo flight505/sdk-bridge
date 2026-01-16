@@ -1,50 +1,154 @@
 ---
 description: "Initialize project for SDK bridge (creates state files, validates harness)"
 argument-hint: "[project-dir]"
-allowed-tools: ["Bash", "Read", "Write"]
+allowed-tools: ["Bash", "Read", "Write", "TodoWrite"]
 ---
 
 # Initialize Project for SDK Bridge
 
-I'll set up this project for SDK bridge workflows.
+I'll set up this project for SDK bridge workflows with automatic harness installation if needed.
 
-## Step 1: Validate Prerequisites
+## Step 0: Check Installation Status
 
-Let me check that the required tools are installed:
+First, let me check if SDK Bridge harness is installed:
 
 ```bash
-# Check harness exists
-if [ ! -f ~/.claude/skills/long-running-agent/harness/autonomous_agent.py ]; then
-  echo "❌ ERROR: Harness not found"
-  echo ""
-  echo "The long-running-agent harness is required but not installed."
-  echo ""
-  echo "To install, run: /sdk-bridge:lra-setup"
-  echo ""
-  echo "This will set up the autonomous agent harness that sdk-bridge uses."
-  exit 1
+# Check installation status silently
+HARNESS_DIR="$HOME/.claude/skills/long-running-agent/harness"
+VERSION_FILE="$HARNESS_DIR/.version"
+PLUGIN_VERSION="2.2.0"
+NEEDS_INSTALL="false"
+NEEDS_UPDATE="false"
+
+# Check if harness exists
+if [ ! -d "$HARNESS_DIR" ] || [ ! -f "$HARNESS_DIR/hybrid_loop_agent.py" ]; then
+  NEEDS_INSTALL="true"
+  echo "SETUP_REQUIRED"
+elif [ -f "$VERSION_FILE" ]; then
+  INSTALLED_VERSION=$(cat "$VERSION_FILE")
+  if [ "$INSTALLED_VERSION" != "$PLUGIN_VERSION" ]; then
+    NEEDS_UPDATE="true"
+    echo "UPDATE_AVAILABLE"
+  else
+    echo "UP_TO_DATE"
+  fi
+else
+  # Version file missing - assume needs update
+  NEEDS_UPDATE="true"
+  echo "UPDATE_AVAILABLE"
 fi
+```
 
-echo "✅ Harness found at ~/.claude/skills/long-running-agent/harness/autonomous_agent.py"
+## Step 0.5: Auto-Install Harness (If Needed)
 
+**If installation or update is needed**, create progress tracker:
+
+Use TodoWrite to create initial tracker if harness installation needed:
+```
+- ⏳ Installing SDK Bridge harness
+- ⏳ Setting up Python environment
+- ⏳ Validating installation
+- ⏳ Creating project configuration
+```
+
+Then run silent installation:
+
+```bash
+if [ "$NEEDS_INSTALL" = "true" ] || [ "$NEEDS_UPDATE" = "true" ]; then
+  # Silent installation
+  SETUP_LOG=".claude/setup.log"
+  mkdir -p .claude
+
+  # Redirect all output to log file (silent for user)
+  exec 1>>"$SETUP_LOG" 2>&1
+
+  echo "[$(date)] Starting SDK Bridge installation..."
+
+  # === STEP 1: Create Directories ===
+  mkdir -p "$HOME/.claude/skills/long-running-agent/harness"
+
+  # === STEP 2: Install Harness Scripts ===
+  SCRIPTS=(
+    "autonomous_agent.py"
+    "hybrid_loop_agent.py"
+    "semantic_memory.py"
+    "model_selector.py"
+    "approval_system.py"
+    "dependency_graph.py"
+    "parallel_coordinator.py"
+  )
+
+  for script in "${SCRIPTS[@]}"; do
+    src="${CLAUDE_PLUGIN_ROOT}/scripts/$script"
+    dst="$HOME/.claude/skills/long-running-agent/harness/$script"
+
+    if [ -f "$src" ]; then
+      cp "$src" "$dst"
+      chmod +x "$dst"
+    fi
+  done
+
+  # === STEP 3: Create Virtual Environment ===
+  VENV_DIR="$HOME/.claude/skills/long-running-agent/.venv"
+
+  if [ ! -d "$VENV_DIR" ]; then
+    if command -v uv &> /dev/null; then
+      uv venv "$VENV_DIR"
+    else
+      python3 -m venv "$VENV_DIR"
+    fi
+  fi
+
+  # === STEP 4: Install SDK ===
+  . "$VENV_DIR/bin/activate"
+
+  if command -v uv &> /dev/null; then
+    uv pip install --quiet claude-agent-sdk
+  else
+    pip install --quiet claude-agent-sdk
+  fi
+
+  deactivate
+
+  # === STEP 5: Write Version File ===
+  echo "2.2.0" > "$HOME/.claude/skills/long-running-agent/harness/.version"
+
+  # === STEP 6: Validate Installation ===
+  VENV_PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
+  SDK_VERSION=$("$VENV_PYTHON" -c "import claude_agent_sdk; print(claude_agent_sdk.__version__)" 2>&1)
+
+  echo "[$(date)] Installation complete. SDK version: $SDK_VERSION"
+
+  # Signal success
+  echo "INSTALL_SUCCESS"
+
+  # Update TodoWrite after installation
+  # - ✅ SDK Bridge harness installed
+  # - ✅ Python environment ready
+  # - ✅ Installation validated
+  # - ⏳ Creating project configuration
+fi
+```
+
+## Step 1: Validate Installation
+
+Now verify everything is ready (or skip if already UP_TO_DATE):
+
+```bash
 # Check venv exists
 VENV_PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
 if [ ! -f "$VENV_PYTHON" ]; then
-  echo "❌ ERROR: SDK virtual environment not found"
-  echo ""
-  echo "Run /sdk-bridge:lra-setup to install the harness and SDK"
+  echo "❌ ERROR: Installation failed. Check .claude/setup.log"
   exit 1
 fi
 
 # Check SDK installed in venv
 if ! "$VENV_PYTHON" -c "import claude_agent_sdk" 2>/dev/null; then
-  echo "❌ ERROR: claude-agent-sdk not installed in venv"
-  echo ""
-  echo "Run /sdk-bridge:lra-setup to reinstall"
+  echo "❌ ERROR: claude-agent-sdk not installed. Check .claude/setup.log"
   exit 1
 fi
 
-echo "✅ Claude Agent SDK installed (in venv)"
+echo "✅ SDK Bridge harness installed and ready"
 
 # Check git
 if ! command -v git &> /dev/null; then
