@@ -604,26 +604,69 @@ bash -x plugins/sdk-bridge/scripts/launch-harness.sh .
 - Users install: `/plugin marketplace add flight505/sdk-bridge-marketplace`
 - Public, others can discover and install
 
-**Version Updates**:
+**Version Management**:
+
+**CRITICAL: Version Synchronization Rule**
+- `marketplace.json` → `.metadata.version` MUST match `plugin.json` → `.version`
+- `marketplace.json` → `.plugins[].version` (for sdk-bridge) MUST match `plugin.json` → `.version`
+- All three version fields must stay in sync at all times
+
+**Automated Check**:
+- GitHub Actions workflow `.github/workflows/version-sync-check.yml` runs on every push
+- Fails CI if versions don't match
+- Comments on PRs with instructions to fix
+
+**Version Bump Process**:
 ```bash
-# 1. Update version in both manifests
-vim .claude-plugin/marketplace.json  # Update metadata.version
-vim plugins/sdk-bridge/.claude-plugin/plugin.json  # Update version
+# 1. Bump plugin version (source of truth)
+jq '.version = "X.Y.Z"' plugins/sdk-bridge/.claude-plugin/plugin.json > tmp && mv tmp plugins/sdk-bridge/.claude-plugin/plugin.json
 
-# 2. Commit changes
+# 2. Sync marketplace.json (both fields)
+jq '.metadata.version = "X.Y.Z"' .claude-plugin/marketplace.json > tmp && mv tmp .claude-plugin/marketplace.json
+jq '.plugins[] |= if .name == "sdk-bridge" then .version = "X.Y.Z" else . end' .claude-plugin/marketplace.json > tmp && mv tmp .claude-plugin/marketplace.json
+
+# 3. Update documentation versions
+# - CLAUDE.md line 3: **Current Version: vX.Y.Z**
+# - README.md line 5: **Version X.Y.Z**
+# - CONTEXT_sdk-bridge.md line 3: **Version**: X.Y.Z
+
+# 4. Add release notes to version history sections
+# - CLAUDE.md ## Recent Releases
+# - README.md ## Recent Releases
+# - CONTEXT_sdk-bridge.md ## Version History
+
+# 5. Commit changes
 git add .
-git commit -m "Release v1.x.x: description of changes"
+git commit -m "chore: bump version to X.Y.Z
 
-# 3. Create git tag
-git tag v1.x.x
-git tag -a v1.x.x -m "Release v1.x.x"
+[Brief description of changes]
 
-# 4. Push with tags
+BREAKING CHANGE: [if any]
+"
+
+# 6. Create git tag (triggers notify-marketplace workflow)
+git tag vX.Y.Z
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+
+# 7. Push with tags
 git push origin main --tags
 
-# 5. Users update with
+# 8. Verify CI passes (version-sync-check workflow)
+
+# 9. Users update with
 /plugin update sdk-bridge@sdk-bridge-marketplace
 ```
+
+**Version Numbering (Semantic Versioning)**:
+- **MAJOR** (X.0.0): Breaking changes, incompatible API changes
+- **MINOR** (X.Y.0): New features, backwards-compatible
+- **PATCH** (X.Y.Z): Bug fixes, backwards-compatible
+
+**Why Version Sync Matters**:
+- Users installing from marketplace expect consistent versions
+- Auto-update systems rely on version matching
+- Version mismatches cause support issues and confusion
+- Marketplace webhooks trigger on version changes
 
 ## Testing Workflow
 

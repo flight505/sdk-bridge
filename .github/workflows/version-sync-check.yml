@@ -1,0 +1,76 @@
+name: Version Sync Check
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.claude-plugin/marketplace.json'
+      - 'plugins/sdk-bridge/.claude-plugin/plugin.json'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '.claude-plugin/marketplace.json'
+      - 'plugins/sdk-bridge/.claude-plugin/plugin.json'
+
+jobs:
+  check-version-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check version sync
+        id: version_check
+        run: |
+          # Extract versions
+          MARKETPLACE_VERSION=$(jq -r '.plugins[] | select(.name=="sdk-bridge") | .version' .claude-plugin/marketplace.json)
+          PLUGIN_VERSION=$(jq -r '.version' plugins/sdk-bridge/.claude-plugin/plugin.json)
+          MARKETPLACE_META_VERSION=$(jq -r '.metadata.version' .claude-plugin/marketplace.json)
+
+          echo "Marketplace plugin version: $MARKETPLACE_VERSION"
+          echo "Plugin.json version: $PLUGIN_VERSION"
+          echo "Marketplace metadata version: $MARKETPLACE_META_VERSION"
+
+          # Check if versions match
+          if [ "$MARKETPLACE_VERSION" != "$PLUGIN_VERSION" ]; then
+            echo "::error::Version mismatch detected!"
+            echo "::error::marketplace.json plugin version: $MARKETPLACE_VERSION"
+            echo "::error::plugin.json version: $PLUGIN_VERSION"
+            echo ""
+            echo "::error::Versions must be synchronized:"
+            echo "::error::1. Update marketplace.json plugins[].version to match plugin.json"
+            echo "::error::2. Or update plugin.json version to match marketplace.json"
+            echo "::error::3. Also ensure marketplace.json metadata.version matches"
+            exit 1
+          fi
+
+          if [ "$MARKETPLACE_META_VERSION" != "$PLUGIN_VERSION" ]; then
+            echo "::warning::Marketplace metadata.version ($MARKETPLACE_META_VERSION) differs from plugin version ($PLUGIN_VERSION)"
+            echo "::warning::Consider updating metadata.version to match for consistency"
+          fi
+
+          echo "✅ Versions are synchronized: $PLUGIN_VERSION"
+
+      - name: Comment on PR (if mismatch)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## ❌ Version Sync Check Failed\n\n' +
+                    'The versions in `marketplace.json` and `plugin.json` do not match.\n\n' +
+                    '**Action Required:**\n' +
+                    '1. Check `marketplace.json` → `.plugins[].version` (for sdk-bridge plugin)\n' +
+                    '2. Check `plugins/sdk-bridge/.claude-plugin/plugin.json` → `.version`\n' +
+                    '3. Ensure both have the same version number\n' +
+                    '4. Also update `marketplace.json` → `.metadata.version` to match\n\n' +
+                    '**Why this matters:**\n' +
+                    '- Users installing from marketplace expect consistent versions\n' +
+                    '- Auto-update systems rely on version matching\n' +
+                    '- Version mismatches cause confusion and support issues\n\n' +
+                    'Please synchronize the versions and push an update.'
+            })
