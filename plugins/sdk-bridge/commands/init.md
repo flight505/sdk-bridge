@@ -16,7 +16,7 @@ First, let me check if SDK Bridge harness is installed:
 # Check installation status silently
 HARNESS_DIR="$HOME/.claude/skills/long-running-agent/harness"
 VERSION_FILE="$HARNESS_DIR/.version"
-PLUGIN_VERSION="2.2.0"
+PLUGIN_VERSION="2.2.1"
 NEEDS_INSTALL="false"
 NEEDS_UPDATE="false"
 
@@ -111,7 +111,7 @@ if [ "$NEEDS_INSTALL" = "true" ] || [ "$NEEDS_UPDATE" = "true" ]; then
   deactivate
 
   # === STEP 5: Write Version File ===
-  echo "2.2.0" > "$HOME/.claude/skills/long-running-agent/harness/.version"
+  echo "2.2.1" > "$HOME/.claude/skills/long-running-agent/harness/.version"
 
   # === STEP 6: Validate Installation ===
   VENV_PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
