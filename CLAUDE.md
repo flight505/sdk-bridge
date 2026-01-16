@@ -10,6 +10,21 @@ This is a **Claude Code plugin marketplace** containing the `sdk-bridge` plugin.
 
 **Key Note**: As of v2.0.1, **SOTA Generative UI transformation is STABLE**. SDK Bridge features intelligent, proactive UX with AskUserQuestion-driven setup, TodoWrite progress tracking, and SessionStart hooks for completion detection. All backend v2.0 phases (hybrid loops, semantic memory, adaptive models, approvals, parallel execution) remain fully functional. **Note**: v2.0.1 removes the broken UserPromptSubmit hook that was blocking operations.
 
+## Version Management & Marketplace Sync
+
+**⚠️ CRITICAL: When committing version changes to `.claude-plugin/plugin.json`:**
+
+1. **Bump version** following semantic versioning (MAJOR.MINOR.PATCH)
+2. **Commit & push** to trigger webhook: `git commit -m "chore: bump version to X.Y.Z" && git push`
+3. **Verify webhook** fired (5 sec): `gh run list --repo flight505/sdk-bridge --limit 1`
+   - Success: "✅ Marketplace notification sent successfully (HTTP 204)"
+   - Failed: See `../../docs/WEBHOOK-TROUBLESHOOTING.md`
+4. **Marketplace auto-syncs** within 30 seconds - no manual `marketplace.json` update needed
+
+**Tip**: Use `../../scripts/bump-plugin-version.sh sdk-bridge X.Y.Z` to automate everything.
+
+---
+
 ## Critical Learning: Plugin Discovery System
 
 **The Problem We Solved**: Manually placing plugins in `~/.claude/plugins/` doesn't work. Claude Code uses an automatic plugin management system that only recognizes plugins installed through its marketplace mechanism.
