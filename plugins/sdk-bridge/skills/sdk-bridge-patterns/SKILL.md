@@ -12,13 +12,21 @@ Bridge Claude Code CLI and Agent SDK for seamless hybrid workflows. Hand off lon
 ## Quick Reference
 
 **Commands**:
-- `/sdk-bridge:init` - Initialize project for SDK bridge
-- `/sdk-bridge:handoff` - Hand off work to autonomous SDK agent
-- `/sdk-bridge:status` - Monitor progress
+- `/sdk-bridge:start` - **[RECOMMENDED]** Interactive setup & auto-launch
+- `/sdk-bridge:watch` - Live progress monitoring
+- `/sdk-bridge:status` - Quick status check
+- `/sdk-bridge:observe` - View agent logs
 - `/sdk-bridge:resume` - Resume in CLI after completion
 - `/sdk-bridge:cancel` - Stop running SDK agent
+- `/sdk-bridge:plan` - Analyze dependencies for parallel execution
+- `/sdk-bridge:approve` - Review pending approvals
+- `/sdk-bridge:init` - **[LEGACY - DEPRECATED]** Manual configuration (use /start)
+- `/sdk-bridge:handoff` - **[LEGACY - DEPRECATED]** Manual launch (use /start)
+- `/sdk-bridge:lra-setup` - **[LEGACY - DEPRECATED]** Manual install (auto-installs)
 
-**Workflow**: Plan → Init → Handoff → Monitor → Resume
+**Modern Workflow (v2.0+)**: Plan → Start → Monitor → Resume
+
+**Legacy Workflow (v1.x - Deprecated)**: Plan → Init → Handoff → Monitor → Resume
 
 ## When to Use SDK Bridge
 
@@ -63,25 +71,33 @@ git commit -m "Initial project plan"
 - Include test criteria in each feature
 - 15-50 features is ideal (too few: not worth automation, too many: risk of drift)
 
-### Phase 2: Initialize SDK Bridge
+### Phase 2: Start SDK Agent (Modern v2.0+)
 
 ```bash
-/sdk-bridge:init
+/sdk-bridge:start
 ```
 
-This creates `.claude/sdk-bridge.local.md` with configuration:
-- Model selection (Sonnet vs Opus)
-- Session limits
-- Progress stall threshold
-- Auto-handoff settings
+This command provides an **interactive setup experience**:
+- Auto-detects if harness is installed (installs if needed)
+- Prompts for model selection (Sonnet vs Opus)
+- Asks about parallel execution preferences
+- Configures advanced features interactively
+- Creates `.claude/sdk-bridge.local.md` with your choices
+- Launches agent immediately after configuration
+- Shows live progress tracking with TodoWrite updates
 
-**Review and customize** the configuration for your project needs.
+**No manual configuration needed** - the command guides you through everything.
 
-### Phase 3: Handoff to SDK (Autonomous)
-
+**Alternatively** (Legacy workflow - deprecated):
 ```bash
-/sdk-bridge:handoff
+# Manual workflow (v1.x - still works but not recommended)
+/sdk-bridge:init      # Create config manually
+/sdk-bridge:handoff   # Launch separately
+
+# Modern equivalent: /sdk-bridge:start (does both in one step)
 ```
+
+### Phase 3: Agent Runs Autonomously
 
 What happens:
 1. **Validation**: Handoff-validator agent checks:
@@ -110,21 +126,31 @@ What happens:
 
 ### Phase 4: Monitor (Optional)
 
+**Modern monitoring options (v2.0+)**:
+
 ```bash
+# Live progress updates (recommended for active monitoring)
+/sdk-bridge:watch
+# Shows real-time TodoWrite updates, progress bars, refreshes every 30 seconds
+
+# Quick status check (non-blocking)
 /sdk-bridge:status
+# Shows: process status, feature progress (28/50), session count (8/20)
+
+# View agent logs (debugging)
+/sdk-bridge:observe
+# Shows last 50 lines of .claude/sdk-bridge.log
 ```
 
-Shows:
-- SDK agent process status (running/stopped)
-- Feature completion progress (e.g., "28/50 passing")
-- Session count (e.g., "8/20 sessions used")
-- Recent log activity
-
-**Monitoring options**:
-- Periodic checks: `/sdk-bridge:status`
+**Legacy monitoring options (v1.x - still works)**:
 - Live logs: `tail -f .claude/sdk-bridge.log`
 - Git commits: `git log --oneline`
 - Feature progress: `jq '.[] | select(.passes==true) | .description' feature_list.json`
+
+**Choose your monitoring style**:
+- **Active monitoring**: Use `/sdk-bridge:watch` for dedicated monitoring sessions
+- **Passive checks**: Use `/sdk-bridge:status` for quick progress checks
+- **Debugging**: Use `/sdk-bridge:observe` to see actual SDK output
 
 ### Phase 5: Resume in CLI (Interactive)
 
@@ -234,30 +260,43 @@ webhook_url:                       # Optional webhook for notifications [v1.4.0]
 
 ### Pattern 1: Standard Long-Running Development
 
+**Modern workflow (v2.0+)**:
 ```bash
 # Day 1: Planning
 /plan
 # Create 40 features for a new web app
 
-/sdk-bridge:init
-/sdk-bridge:handoff
+/sdk-bridge:start
+# Interactive setup, then auto-launches
 # Close laptop, go home
 
 # Day 2: Check progress
-/sdk-bridge:status
-# 32/40 features passing, 12 sessions used
+/sdk-bridge:watch
+# Live monitoring with TodoWrite updates
+# Or quick check: /sdk-bridge:status
 
 # Day 3: SDK completes
 /sdk-bridge:resume
-# Review: 38/40 done, 2 features need clarification
+# Comprehensive report: 38/40 done, file validation, next steps
 # Fix issues manually, continue development
+```
+
+**Legacy workflow (v1.x - still works)**:
+```bash
+/plan
+/sdk-bridge:init      # Manual config
+/sdk-bridge:handoff   # Separate launch
+/sdk-bridge:status    # Basic status
+/sdk-bridge:resume    # Simple report
 ```
 
 ### Pattern 2: Iterative Refinement
 
+**Modern workflow (v2.0+)**:
 ```bash
 # Round 1: Bulk implementation
-/sdk-bridge:handoff
+/sdk-bridge:start
+# Interactive setup on first run
 # ... SDK completes 30/50 features ...
 /sdk-bridge:resume
 
@@ -266,9 +305,16 @@ webhook_url:                       # Optional webhook for notifications [v1.4.0]
 git commit -m "Refine SDK implementations"
 
 # Round 2: Continue remaining features
-/sdk-bridge:handoff
+/sdk-bridge:start
+# Reuses existing config, auto-launches
 # ... SDK completes remaining 20 ...
 /sdk-bridge:resume
+```
+
+**Legacy equivalent**:
+```bash
+/sdk-bridge:init + /sdk-bridge:handoff (first run)
+/sdk-bridge:handoff (subsequent runs)
 ```
 
 ### Pattern 3: Feature Batching
@@ -278,7 +324,7 @@ git commit -m "Refine SDK implementations"
 jq '.[0:20]' all-features.json > feature_list.json
 git add feature_list.json && git commit -m "Phase 1 features"
 
-/sdk-bridge:handoff
+/sdk-bridge:start
 # ... SDK completes 20 features ...
 /sdk-bridge:resume
 
@@ -286,8 +332,10 @@ git add feature_list.json && git commit -m "Phase 1 features"
 jq '.[20:40]' all-features.json > feature_list.json
 git add feature_list.json && git commit -m "Phase 2 features"
 
-/sdk-bridge:handoff
+/sdk-bridge:start
 # ... continue ...
+
+# ⚠️ Legacy: Use /sdk-bridge:handoff instead of /start
 ```
 
 ### Pattern 4: Emergency Cancel and Recovery
@@ -301,7 +349,8 @@ git add feature_list.json && git commit -m "Phase 2 features"
 
 # Review what happened
 git log --oneline -10
-tail -100 .claude/sdk-bridge.log
+/sdk-bridge:observe           # Modern: View logs directly
+# Or: tail -100 .claude/sdk-bridge.log
 cat claude-progress.txt
 
 # Identify issue: Feature #1 was too vague
@@ -311,11 +360,15 @@ vim feature_list.json
 git commit -m "Clarify feature requirements"
 
 # Try again with better guidance
-/sdk-bridge:handoff
+/sdk-bridge:start             # Modern: Interactive restart
+# Or legacy: /sdk-bridge:handoff
 ```
 
 ### Pattern 5: Auto-Handoff
 
+**Note**: In v2.0+, `/sdk-bridge:start` replaces this pattern by combining setup + launch.
+
+**Legacy auto-handoff** (v1.x):
 ```markdown
 # .claude/sdk-bridge.local.md
 ---
@@ -327,6 +380,14 @@ auto_handoff_after_plan: true
 /plan
 # Automatically hands off immediately
 # Check progress later with /sdk-bridge:status
+```
+
+**Modern equivalent**:
+```bash
+/plan
+/sdk-bridge:start
+# Interactive setup, then immediate launch
+# Use /sdk-bridge:watch for live progress
 ```
 
 ## Best Practices
@@ -371,15 +432,25 @@ Start simple, add complexity:
 
 ### 4. Monitor Periodically
 
-Check status every few hours:
+**Modern monitoring** (v2.0+):
 ```bash
+# Quick check
 /sdk-bridge:status
 
-# If progress seems slow
-tail -50 .claude/sdk-bridge.log
+# Live updates (blocks session)
+/sdk-bridge:watch
+
+# View logs for debugging
+/sdk-bridge:observe
 
 # If stuck on one feature
 grep "Feature #N" claude-progress.txt
+```
+
+**Legacy monitoring**:
+```bash
+/sdk-bridge:status
+tail -50 .claude/sdk-bridge.log
 ```
 
 ### 5. Commit Often (Manually)
@@ -421,9 +492,13 @@ Try with a small test:
 # Create 5-feature test plan
 echo '[...]' > feature_list.json
 
-/sdk-bridge:handoff
+/sdk-bridge:start         # Modern
+# Or legacy: /sdk-bridge:handoff
+
 # Wait 15 minutes
-/sdk-bridge:status
+/sdk-bridge:watch         # Modern: Live monitoring
+# Or legacy: /sdk-bridge:status
+
 # If working well, scale up to full plan
 ```
 
@@ -431,25 +506,27 @@ echo '[...]' > feature_list.json
 
 ### SDK Won't Start
 
+**Modern approach** (v2.0+):
 ```bash
-# Check logs
-cat .claude/sdk-bridge.log
+# View logs directly
+/sdk-bridge:observe
 
-# Common issues:
-# 1. API key not set
+# Common issues auto-detected by /sdk-bridge:start:
+# 1. API key not set - prompts during setup
+# 2. Harness missing - auto-installs if needed
+# 3. SDK not installed - shown in error messages
+
+# Manual checks (if needed):
 echo $ANTHROPIC_API_KEY  # Should not be empty
-# Or use OAuth: claude setup-token
-
-# 2. SDK not installed
 python3 -c "import claude_agent_sdk"
+git status  # Must be a git repo
+```
 
-# 3. Harness missing
-ls ~/.claude/skills/long-running-agent/harness/autonomous_agent.py
-# If missing: /user:lra-setup
-
-# 4. Git not initialized
-git status
-# If not a repo: git init
+**Legacy troubleshooting**:
+```bash
+cat .claude/sdk-bridge.log
+ls ~/.claude/skills/long-running-agent/harness/
+# If missing harness: /sdk-bridge:lra-setup
 ```
 
 ### Progress Stalled
@@ -458,8 +535,8 @@ git status
 /sdk-bridge:status
 # Sessions: 10/20, Features: 3/50 (only 3 done in 10 sessions!)
 
-# Check what's failing
-tail -100 .claude/sdk-bridge.log
+# Check what's failing (modern)
+/sdk-bridge:observe                # Last 50 lines of logs
 cat claude-progress.txt | tail -50
 
 # Common causes:
@@ -471,7 +548,8 @@ cat claude-progress.txt | tail -50
 /sdk-bridge:cancel
 vim feature_list.json  # Clarify or skip stuck feature
 git commit -m "Clarify feature requirements"
-/sdk-bridge:handoff
+/sdk-bridge:start      # Modern: Interactive restart
+# Or legacy: /sdk-bridge:handoff
 ```
 
 ### Tests Failing After Resume
@@ -580,18 +658,24 @@ The SDK reads this before each session.
 
 Use different models for different work:
 
+**Modern workflow** (v2.0+):
 ```bash
 # Use Opus for complex features
-model: claude-opus-4-5-20251101
-/sdk-bridge:handoff
+/sdk-bridge:start
+# Select Opus during interactive setup
 # ... completes complex features ...
 /sdk-bridge:resume
 
 # Switch to Sonnet for simple features
 # Edit .claude/sdk-bridge.local.md:
 model: claude-sonnet-4-5-20250929
-/sdk-bridge:handoff
+/sdk-bridge:start
 # ... completes remaining simple features ...
+```
+
+**Legacy workflow** (v1.x):
+```bash
+# Edit config manually, then /sdk-bridge:handoff
 ```
 
 ## Version 1.4.0 Features
@@ -818,7 +902,7 @@ SDK Bridge wraps the existing long-running-agent harness:
 - **Harness**: `~/.claude/skills/long-running-agent/harness/autonomous_agent.py`
 - **SDK Bridge**: CLI-friendly plugin wrapper
 
-**Direct harness use**:
+**Direct harness use** (legacy):
 ```bash
 python ~/.claude/skills/long-running-agent/harness/autonomous_agent.py \
     --project-dir . \
@@ -827,7 +911,8 @@ python ~/.claude/skills/long-running-agent/harness/autonomous_agent.py \
 
 **SDK Bridge use**:
 ```bash
-/sdk-bridge:handoff  # Wraps the above
+/sdk-bridge:start    # Modern: Interactive wrapper with auto-setup
+# Or legacy: /sdk-bridge:handoff
 ```
 
 **Coexistence**:

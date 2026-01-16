@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Current Version: v2.0.1** | Last Updated: 2026-01-16
+**Current Version: v2.2.3** | Last Updated: 2026-01-16
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -285,7 +285,7 @@ The plugin uses file-based state sharing between CLI and SDK:
 
 **State File Lifecycle**:
 
-**Simplified Workflow (v2.0.0+):**
+**✅ RECOMMENDED Workflow (v2.0+):**
 1. User runs `/sdk-bridge:start` → Auto-detects setup status, installs harness if needed (silent), shows interactive config UI, launches agent
 2. User runs `/sdk-bridge:plan` (optional, before start) → creates `feature-graph.json`, `execution-plan.json` for parallel execution
 3. SDK runs (parallel or sequential) → updates `feature_list.json`, appends to `claude-progress.txt`, uses semantic memory
@@ -293,7 +293,10 @@ The plugin uses file-based state sharing between CLI and SDK:
 5. SDK completes → creates `sdk_complete.json` (parallel mode also creates `worker-sessions.json`)
 6. User runs `/sdk-bridge:resume` → reads all state files, validates deliverable files exist, generates report, archives completion signal
 
-**Legacy Workflow (v2.0.0 and earlier):**
+**⚠️ DEPRECATED Workflow (v1.x - Legacy):**
+
+**Note**: This workflow is deprecated. Use `/sdk-bridge:start` for modern experience.
+
 0. User runs `/sdk-bridge:lra-setup` (first time only) → installs 7 harness scripts to `~/.claude/skills/`
 1. User runs `/sdk-bridge:init` → creates `sdk-bridge.local.md` with advanced feature flags and parallel config
 2. User runs `/sdk-bridge:plan` (optional) → creates `feature-graph.json`, `execution-plan.json` for parallel execution
@@ -303,6 +306,19 @@ The plugin uses file-based state sharing between CLI and SDK:
 6. User runs `/sdk-bridge:approve` (if high-risk operations detected) → reviews and approves pending operations
 7. SDK completes → creates `sdk_complete.json` (parallel mode also creates `worker-sessions.json`)
 8. User runs `/sdk-bridge:resume` → reads all state files, validates deliverable files exist, generates report, archives completion signal
+
+### Deprecation Timeline
+
+**v2.2.3 (Current)**
+- Added deprecation warnings to `/init`, `/handoff`, `/lra-setup`
+- Updated documentation to promote `/start`
+
+**v3.0.0 (Planned - 3+ months)**
+- Remove `/init`, `/handoff`, `/lra-setup` entirely
+- `/start` becomes the ONLY entry point
+- Breaking change with migration guide
+
+Users should migrate to `/sdk-bridge:start` now to avoid disruption.
 
 ### Monitoring Progress
 
@@ -771,6 +787,22 @@ Based on analysis of existing marketplaces (claude-code-workflows):
 
 ## Recent Releases
 
+### v2.2.3 - Critical Fixes: Version Sync & Deprecation (2026-01-16)
+- **TYPE**: Critical bugfix + UX improvements
+- **CRITICAL FIX**: Updated version strings in init.md/start.md to match plugin version (2.2.2)
+  - Fixes parallel_coordinator.py installation issue
+  - Users with v2.2.1 can now update correctly
+- **DEPRECATION**: Added warnings to `/sdk-bridge:init`
+  - Clear guidance to use `/sdk-bridge:start` instead
+  - Updated all command descriptions
+- **DOCUMENTATION**: Major documentation overhaul
+  - README.md: Promoted v2.0 workflow, added migration guide
+  - SKILL.md: Reordered commands, marked legacy
+  - CLAUDE.md: Renamed sections to RECOMMENDED/DEPRECATED
+- **IMPACT**: Reduces user confusion, guides to modern workflow
+- **FILES**: 6 changed (init.md, start.md, README.md, SKILL.md, CLAUDE.md, plugin.json)
+- **COMMITS**: [to be added]
+
 ### v2.0.1 - Critical Bugfix: Remove Broken Hook (2026-01-16)
 - **TYPE**: Critical bugfix release
 - **CRITICAL FIX**: Removed UserPromptSubmit hook that blocked all operations
@@ -848,6 +880,7 @@ Based on analysis of existing marketplaces (claude-code-workflows):
 
 | Version | Date | Type | Key Changes |
 |---------|------|------|-------------|
+| v2.2.3 | 2026-01-16 | Bugfix | **Critical version sync fix + deprecation warnings** |
 | v2.0.1 | 2026-01-16 | Bugfix | **Critical fix - Removed blocking UserPromptSubmit hook** |
 | v2.0.0 | 2026-01-11 | Major | **SOTA Generative UI - Interactive setup, live progress, intelligent UX** |
 | v1.9.0 | 2026-01-11 | Major | **Phase 3 complete - Parallel execution fully integrated** |

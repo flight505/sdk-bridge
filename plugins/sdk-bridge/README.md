@@ -25,6 +25,41 @@ Prerequisites:
 
 ## Quick Start
 
+## 🚨 Important: Use the v2.0 Workflow
+
+If you're new to SDK Bridge, **skip the legacy workflow** and use the modern v2.0 approach below.
+
+### ✅ Recommended: v2.0 Workflow (One Command)
+
+```bash
+/sdk-bridge:start
+```
+
+This provides:
+- Interactive configuration via AskUserQuestion
+- Auto-installation if needed
+- Auto-launch (no separate /handoff)
+- Live progress tracking with TodoWrite
+
+**After SDK completes:**
+
+```bash
+/sdk-bridge:resume   # Comprehensive completion report
+```
+
+**Optional monitoring:**
+
+```bash
+/sdk-bridge:watch    # Live progress updates (30 sec polling)
+/sdk-bridge:status   # Quick status check
+/sdk-bridge:observe  # View agent logs
+```
+
+### ⚠️ Legacy: v1.x Workflow (Deprecated)
+
+<details>
+<summary>Click to expand legacy workflow (not recommended)</summary>
+
 ### 1. Setup Harness (First Time Only)
 
 ```bash
@@ -74,14 +109,27 @@ Check feature completion, session count, and recent activity.
 
 Review SDK work, see completion report, continue in CLI.
 
+**Note**: This workflow is deprecated. Use `/sdk-bridge:start` instead.
+
+</details>
+
 ## Commands
 
-- `/sdk-bridge:lra-setup` - Install bundled harness (first-time setup)
-- `/sdk-bridge:init` - Initialize project for SDK bridge
-- `/sdk-bridge:handoff` - Hand off work to SDK agent
-- `/sdk-bridge:status` - Check SDK agent progress
-- `/sdk-bridge:resume` - Resume CLI after SDK completes
+### Primary Commands (v2.0+)
+- `/sdk-bridge:start` - **[RECOMMENDED]** Interactive setup & auto-launch
+- `/sdk-bridge:watch` - Live progress monitoring with TodoWrite
+- `/sdk-bridge:status` - Quick status check
+- `/sdk-bridge:plan` - Analyze dependencies for parallel execution
+- `/sdk-bridge:enable-parallel` - Enable parallel execution mode
+- `/sdk-bridge:observe` - View agent logs
+- `/sdk-bridge:approve` - Review pending high-risk operations
+- `/sdk-bridge:resume` - Resume in CLI after completion
 - `/sdk-bridge:cancel` - Stop running SDK agent
+
+### Legacy Commands (v1.x - Deprecated)
+- `/sdk-bridge:init` - ⚠️ **DEPRECATED** - Use `/sdk-bridge:start` instead
+- `/sdk-bridge:handoff` - ⚠️ **DEPRECATED** - Now part of `/sdk-bridge:start`
+- `/sdk-bridge:lra-setup` - ⚠️ **DEPRECATED** - Auto-installs during `/sdk-bridge:start`
 
 ## Configuration
 
@@ -173,6 +221,30 @@ $ /sdk-bridge:resume
     ├── monitor-progress.sh
     └── parse-state.sh
 ```
+
+## Migration Guide: v1.x → v2.0
+
+### Quick Summary
+- **Old**: `/sdk-bridge:init` + `/sdk-bridge:handoff` (2 commands, manual config)
+- **New**: `/sdk-bridge:start` (1 command, interactive UI)
+
+### Why Migrate?
+- ✅ 67% fewer commands
+- ✅ Interactive configuration (AskUserQuestion)
+- ✅ Live progress tracking (TodoWrite)
+- ✅ Auto-launch (no separate handoff)
+
+### Deprecated Commands
+- `/sdk-bridge:init` → Use `/sdk-bridge:start`
+- `/sdk-bridge:handoff` → Included in `/sdk-bridge:start`
+- `/sdk-bridge:lra-setup` → Auto-installs during `/sdk-bridge:start`
+
+### When to Use Legacy Commands
+- Scripting/automation (init creates config files programmatically)
+- CI/CD pipelines (non-interactive environments)
+- Advanced users who prefer manual configuration
+
+For most users, `/sdk-bridge:start` is the recommended approach.
 
 ## Troubleshooting
 

@@ -1,6 +1,6 @@
 {
   "name": "sdk-bridge",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "description": "SOTA autonomous development with generative UI: interactive setup, live progress, intelligent resume, context-aware help.",
   "author": {
     "name": "Jesper Vang",
@@ -11,14 +11,11 @@
   "homepage": "https://github.com/flight505/sdk-bridge-marketplace",
   "keywords": ["agent-sdk", "automation", "long-running", "harness", "handoff", "generative-ui", "proactive"],
   "commands": [
-    "./commands/lra-setup.md",
     "./commands/start.md",
     "./commands/watch.md",
     "./commands/status.md",
     "./commands/resume.md",
     "./commands/cancel.md",
-    "./commands/init.md",
-    "./commands/handoff.md",
     "./commands/plan.md",
     "./commands/enable-parallel.md",
     "./commands/approve.md",
