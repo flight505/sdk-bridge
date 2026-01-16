@@ -1,6 +1,6 @@
 {
   "name": "sdk-bridge",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "SOTA autonomous development with generative UI: interactive setup, live progress, intelligent resume, context-aware help.",
   "author": {
     "name": "Jesper Vang",
@@ -30,6 +30,5 @@
   ],
   "skills": [
     "./skills/sdk-bridge-patterns"
-  ],
-  "hooks": "./hooks/hooks.json"
+  ]
 }
