@@ -2,9 +2,11 @@
 
 # SDK Bridge Marketplace
 
-**Version 2.0.0** - SOTA Autonomous Development with Intelligent Generative UI
+**Version 2.0.1** - SOTA Autonomous Development with Intelligent Generative UI
 
-## 🎉 What's New in v2.0: Generative UI Transformation
+## 🎉 What's New in v2.0.1: Stable Release
+
+**v2.0.1 Critical Bugfix** (2026-01-16): Removed UserPromptSubmit hook that blocked all operations. Plugin now works without requiring explicit approval on every prompt.
 
 SDK Bridge v2.0 transforms from command-driven to **intelligent, proactive** experience:
 
@@ -72,11 +74,6 @@ tail -f .claude/sdk-bridge.log  # External monitoring
   - Rich visual formatting (emojis, bars, separators)
   - Context-aware messaging
   - Clear call-to-action
-
-- **Context-Aware Help**: UserPromptSubmit hook
-  - Intelligent pattern matching for common questions
-  - Suggests relevant commands based on context
-  - Non-intrusive, only activates when relevant
 
 ### 🤖 Core Autonomous Development
 
@@ -388,6 +385,17 @@ File-based state sharing between CLI and SDK:
 
 ## Recent Releases
 
+### v2.0.1 (2026-01-16) - Critical Bugfix
+
+**Critical Fix**: Removed UserPromptSubmit hook that blocked all operations
+
+**Issue**: Prompt-based hook triggered Claude Code security protocols, requiring explicit user approval on every prompt
+
+**Resolution**:
+- Removed UserPromptSubmit hook from hooks.json
+- Removed reference to non-existent monitor-progress.sh
+- Use `/sdk-bridge:watch` or `/sdk-bridge:status` for progress monitoring
+
 ### v2.0.0 (2026-01-11) - SOTA Generative UI Transformation
 
 **Major UX Overhaul** - Intelligent, proactive experience:
@@ -401,7 +409,6 @@ File-based state sharing between CLI and SDK:
 
 **NEW Hooks**:
 - SessionStart (prompt-based) - Rich completion notifications with LLM analysis
-- UserPromptSubmit - Context-aware help for natural question answering
 
 **Impact**: 67% reduction in commands to start, live visibility, proactive guidance, no phantom completions
 

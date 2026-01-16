@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Current Version: v2.0.0** | Last Updated: 2026-01-11
+**Current Version: v2.0.1** | Last Updated: 2026-01-16
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a **Claude Code plugin marketplace** containing the `sdk-bridge` plugin. The plugin bridges Claude Code CLI with the Claude Agent SDK for long-running autonomous development tasks, implementing Anthropic's two-agent harness pattern.
 
-**Key Note**: As of v2.0.0, **SOTA Generative UI transformation is COMPLETE**. SDK Bridge now features intelligent, proactive UX with AskUserQuestion-driven setup, TodoWrite progress tracking, prompt-based hooks for completion detection, and context-aware help. All backend v2.0 phases (hybrid loops, semantic memory, adaptive models, approvals, parallel execution) remain fully functional.
+**Key Note**: As of v2.0.1, **SOTA Generative UI transformation is STABLE**. SDK Bridge features intelligent, proactive UX with AskUserQuestion-driven setup, TodoWrite progress tracking, and SessionStart hooks for completion detection. All backend v2.0 phases (hybrid loops, semantic memory, adaptive models, approvals, parallel execution) remain fully functional. **Note**: v2.0.1 removes the broken UserPromptSubmit hook that was blocking operations.
 
 ## Critical Learning: Plugin Discovery System
 
@@ -223,16 +223,11 @@ Claude Code auto-discovers components from standard directories:
   - Notifies user if SDK finished while they were away
   - Rich visual notification with progress bars, session count, completion reason
   - Prompts to run `/sdk-bridge:resume`
-- UserPromptSubmit (prompt-based, v2.1.0+): **Passive progress monitor** + context-aware help
-  - **Dual functionality**:
-    1. Shows lightweight progress on every user prompt (if SDK running)
-       - Example: "🔄 SDK Bridge: 3/5 features complete (60%) | Session 12/20 | Mode: sequential"
-       - Non-intrusive: 1-2 lines, only when SDK is active
-       - Allows user to work while monitoring passively
-    2. Provides context-aware help for SDK Bridge questions
-       - Detects questions about status, progress, errors, cancellation
-       - Suggests relevant commands (/watch, /status, /cancel, /resume)
-  - **Design philosophy**: Complement to `/watch` - passive vs active monitoring
+- UserPromptSubmit: **REMOVED in v2.0.1** (was causing operation blocking)
+  - Originally intended for passive progress monitoring
+  - Triggered Claude Code security protocols that blocked all operations
+  - Removed until proper implementation available
+  - Use `/sdk-bridge:watch` or `/sdk-bridge:status` for progress updates
 - Stop (command-based): Logs SDK continues running
   - Reminds user SDK process is still running in background
   - Does NOT kill SDK (intentional - allows background work)
@@ -275,7 +270,7 @@ The plugin uses file-based state sharing between CLI and SDK:
 
 **State File Lifecycle**:
 
-**Simplified Workflow (v2.1.0+):**
+**Simplified Workflow (v2.0.0+):**
 1. User runs `/sdk-bridge:start` → Auto-detects setup status, installs harness if needed (silent), shows interactive config UI, launches agent
 2. User runs `/sdk-bridge:plan` (optional, before start) → creates `feature-graph.json`, `execution-plan.json` for parallel execution
 3. SDK runs (parallel or sequential) → updates `feature_list.json`, appends to `claude-progress.txt`, uses semantic memory
@@ -298,22 +293,9 @@ The plugin uses file-based state sharing between CLI and SDK:
 
 SDK Bridge offers **dual monitoring approaches** to fit different workflows:
 
-**1. Passive Monitoring (v2.1.0+) - Recommended for multitasking**
-- **How it works**: UserPromptSubmit hook shows lightweight progress on every user prompt
-- **When to use**: When you want to monitor progress while working on other tasks
-- **What you see**:
-  ```
-  🔄 SDK Bridge: 3/5 features complete (60%) | Session 12/20 | Mode: sequential
-  ```
-- **Benefits**:
-  - Non-blocking - continue working in same session
-  - Automatic - no command needed
-  - Concise - 1-2 lines, minimal distraction
-  - Smart - only shows when SDK is actually running
-- **Implementation**: Prompt-based hook, no bash script needed
-- **Customization**: Disable by removing UserPromptSubmit hook from hooks.json
+**Note on Passive Monitoring**: The v2.1.0 UserPromptSubmit hook feature was removed in v2.0.1 due to security protocol conflicts. Use active monitoring methods below instead.
 
-**2. Active Monitoring - For dedicated observation**
+**1. Active Monitoring - For progress tracking**
 - **`/sdk-bridge:watch`**: Live updates every 30 seconds
   - **When to use**: When you want dedicated monitoring session
   - **What you see**: Real-time progress with TodoWrite updates, visual progress bars
@@ -330,30 +312,27 @@ SDK Bridge offers **dual monitoring approaches** to fit different workflows:
   - **What you see**: Last 50 lines of `.claude/sdk-bridge.log`
   - **Behavior**: Non-blocking - snapshot of recent activity
 
-**3. Automatic Notifications**
+**2. Automatic Notifications**
 - **SessionStart hook**: Notifies when SDK completes while you're away
   - Rich visual notification with completion stats
   - Prompts to run `/sdk-bridge:resume` for detailed report
 
 **Recommended Workflow**:
 1. Start SDK: `/sdk-bridge:start`
-2. Work on other tasks - passive progress shows automatically
-3. If curious: `/sdk-bridge:status` for quick check
+2. Work on other tasks
+3. Check progress: `/sdk-bridge:status` for quick check
 4. If debugging: `/sdk-bridge:observe` to see logs
-5. If impatient: `/sdk-bridge:watch` for live updates
+5. For live updates: `/sdk-bridge:watch` for dedicated monitoring
 6. On completion: `/sdk-bridge:resume` for full report
 
 ### Integration Points
 
 **Self-Contained Harness**:
 - Plugin bundles 7 harness scripts in `scripts/` (v1.4.0 + v2.0 complete set)
-- `/sdk-bridge:start` **auto-installs** harness if needed (v2.1.0+):
-  - Silent background installation (output → `.claude/setup.log`)
-  - Version checking via `.version` file
-  - Auto-updates when plugin version changes
+- `/sdk-bridge:lra-setup` installs harness scripts manually (required first-time setup)
   - Creates venv + installs `claude-agent-sdk`
   - Installs all 7 scripts to `~/.claude/skills/long-running-agent/harness/`
-- `/sdk-bridge:lra-setup` still available for manual installation (legacy)
+- Auto-install feature planned for future release
 - No external dependencies - plugin is fully self-contained
 - `/sdk-bridge:start` **auto-detects execution mode** (v1.9.0+):
   - **Sequential mode** (default): Uses `hybrid_loop_agent.py`
@@ -734,26 +713,20 @@ Based on analysis of existing marketplaces (claude-code-workflows):
 
 ## Recent Releases
 
-### v2.1.0 (In Progress) - One-Command Setup + Passive Monitoring (2026-01-11)
-- **MILESTONE**: Zero-friction startup + work-while-monitoring UX
-- **Enhanced Command**: `/sdk-bridge:start` - Auto-detects setup status, silently installs if needed
-  - Version tracking via `.version` file (compares plugin v2.1.0 vs installed)
-  - Silent background installation (all output → `.claude/setup.log`)
-  - Clean UI - user only sees TodoWrite progress and AskUserQuestion menus
-  - Auto-updates harness when plugin version changes
-  - Idempotent - safe to run multiple times
-- **NEW Feature**: Passive monitoring via UserPromptSubmit hook
-  - Shows lightweight progress on every user prompt (if SDK running)
-  - Example: "🔄 SDK Bridge: 3/5 features complete (60%) | Session 12/20"
-  - Non-blocking - user can work while monitoring passively
-  - Complements `/watch` (passive vs active monitoring)
-- **UX Impact**:
-  - Setup: 2 manual commands → 1 command (50% reduction)
-  - Monitoring: No longer need `/watch` to track progress
-  - Workflow: Start SDK, work on other tasks, auto-notified on completion
-  - No bash output clutter
-- **Legacy Support**: `/sdk-bridge:lra-setup` still available for manual installation
-- **Files**: 3 changed (start.md, hooks.json, CLAUDE.md)
+### v2.0.1 - Critical Bugfix: Remove Broken Hook (2026-01-16)
+- **TYPE**: Critical bugfix release
+- **CRITICAL FIX**: Removed UserPromptSubmit hook that blocked all operations
+  - Hook triggered Claude Code security protocols requiring explicit user confirmation
+  - Every user prompt was blocked until approval granted
+  - Root cause: Prompt-based hook interpreted as autonomous action
+- **REMOVED**:
+  - UserPromptSubmit hook from hooks.json
+  - Reference to non-existent monitor-progress.sh from plugin.json
+  - Passive monitoring feature (incomplete implementation)
+- **IMPACT**: Plugin now works without blocking operations on every prompt
+- **WORKAROUND**: Use `/sdk-bridge:watch` or `/sdk-bridge:status` for progress monitoring
+- **FILES**: 2 changed (hooks.json, plugin.json)
+- **COMMITS**: 8ebe8f2, 327e2d3
 
 ### v2.0.0 - SOTA Generative UI Transformation (2026-01-11)
 - **MILESTONE**: Major UX overhaul - intelligent, proactive experience
@@ -764,7 +737,6 @@ Based on analysis of existing marketplaces (claude-code-workflows):
   - `/sdk-bridge:resume` - Comprehensive report (+180 lines): executive summary, feature breakdown, ✅/❌ file validation, git commits analysis, speedup calculations, next steps guidance
 - **NEW Hooks**:
   - SessionStart (prompt-based) - Rich completion detection with LLM analysis, visual formatting (emojis, progress bars, separators)
-  - UserPromptSubmit (context-aware help) - Intelligent pattern matching for common questions, suggests relevant commands
 - **Architecture**: Commands: 10 → 12 (added start, watch), prompt-based hooks for proactive notifications
 - **UX Impact**: 67% reduction in commands to start, live visibility, proactive guidance, no phantom completions
 - **Files**: 6 changed, 762 insertions(+), 206 deletions(-)
@@ -818,7 +790,7 @@ Based on analysis of existing marketplaces (claude-code-workflows):
 
 | Version | Date | Type | Key Changes |
 |---------|------|------|-------------|
-| v2.1.0 | 2026-01-11 | Minor | **One-command setup - Silent auto-install, version tracking** |
+| v2.0.1 | 2026-01-16 | Bugfix | **Critical fix - Removed blocking UserPromptSubmit hook** |
 | v2.0.0 | 2026-01-11 | Major | **SOTA Generative UI - Interactive setup, live progress, intelligent UX** |
 | v1.9.0 | 2026-01-11 | Major | **Phase 3 complete - Parallel execution fully integrated** |
 | v1.8.1 | 2026-01-11 | Bugfix | File validation in resume command |

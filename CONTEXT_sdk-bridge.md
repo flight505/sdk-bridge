@@ -1,7 +1,7 @@
 # CONTEXT: SDK Bridge Plugin
 
-**Version**: 2.0.0
-**Last Updated**: 2026-01-13
+**Version**: 2.0.1
+**Last Updated**: 2026-01-16
 **Purpose**: Ground truth architecture and consolidated context for sdk-bridge plugin
 
 This document consolidates critical information from all markdown files for quick developer onboarding.
@@ -30,7 +30,8 @@ SDK Bridge seamlessly bridges Claude Code CLI with the Claude Agent SDK for long
 
 ### Core Capabilities
 
-**SOTA Features (v2.0)**:
+**SOTA Features (v2.0.1)**:
+- **v2.0.1 Bugfix**: Removed broken UserPromptSubmit hook (was blocking all operations)
 - **Generative UI**: Interactive setup, live progress, proactive notifications
 - **Hybrid Loops** (Phase 1): Same-session self-healing + multi-session progression (60% cost reduction)
 - **Semantic Memory** (Phase 1): Cross-project learning from past implementations
@@ -634,28 +635,27 @@ SDK Bridge offers **dual monitoring approaches**:
 
 ## Version History
 
-### v2.1.0 (In Progress) - One-Command Setup + Passive Monitoring (2026-01-11)
+### v2.0.1 - Critical Bugfix: Remove Broken Hook (2026-01-16)
 
-**Milestone**: Zero-friction startup + work-while-monitoring UX
+**Type**: Critical bugfix release
 
-**Changes**:
-- Enhanced `/sdk-bridge:start` command:
-  - Auto-detects setup status via `.version` file
-  - Silent background installation (output → `.claude/setup.log`)
-  - Version tracking (compares plugin v2.1.0 vs installed)
-  - Clean UI - TodoWrite + AskUserQuestion only
-  - Auto-updates harness when plugin version changes
-  - Idempotent (safe to run multiple times)
-- NEW: Passive monitoring via UserPromptSubmit hook
-  - Shows progress on every user prompt
-  - Non-blocking, minimal distraction
-  - Complements `/watch` (passive vs active)
-- Legacy: `/sdk-bridge:lra-setup` still available
+**Critical Fix**:
+- Removed UserPromptSubmit hook that blocked all operations
+  - Hook triggered Claude Code security protocols
+  - Required explicit user confirmation on every prompt
+  - Root cause: Prompt-based hook interpreted as autonomous action
 
-**UX Impact**:
-- Setup: 2 commands → 1 command (50% reduction)
-- Monitoring: No longer need `/watch` to track progress
-- Workflow: Start SDK, work on other tasks, auto-notified
+**Removed**:
+- UserPromptSubmit hook from hooks.json
+- Reference to non-existent monitor-progress.sh
+- Passive monitoring feature (incomplete implementation)
+
+**Impact**:
+- Plugin now works without blocking operations
+- Use `/sdk-bridge:watch` or `/sdk-bridge:status` for progress monitoring
+
+**Files**: 2 changed (hooks.json, plugin.json)
+**Commits**: 8ebe8f2, 327e2d3
 
 ### v2.0.0 - SOTA Generative UI Transformation (2026-01-11)
 
@@ -670,7 +670,6 @@ SDK Bridge offers **dual monitoring approaches**:
 
 **NEW Hooks**:
 - SessionStart (prompt-based): Rich completion detection with LLM analysis
-- UserPromptSubmit: Context-aware help for natural questions
 
 **UX Impact**:
 - 67% reduction in commands to start
