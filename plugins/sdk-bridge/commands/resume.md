@@ -8,6 +8,113 @@ allowed-tools: ["Bash", "Read"]
 
 I'll provide a comprehensive review of the SDK agent's work with detailed analysis.
 
+## Part 0: State Validation and Backup
+
+First, let me validate all state files and create backups:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+echo "🔍 Validating state files..."
+
+# Function to validate JSON file
+validate_json() {
+  local file="$1"
+  if [ ! -f "$file" ]; then
+    return 1  # File doesn't exist
+  fi
+
+  if ! jq empty "$file" 2>/dev/null; then
+    return 2  # JSON is corrupted
+  fi
+
+  return 0  # Valid
+}
+
+# Function to restore from backup
+restore_from_backup() {
+  local file="$1"
+  local backup=""
+
+  # Find most recent backup
+  if ls "${file}".*.bak 1> /dev/null 2>&1; then
+    backup=$(ls -t "${file}".*.bak | head -1)
+  fi
+
+  if [ -n "$backup" ] && [ -f "$backup" ]; then
+    echo "  ⚠️  Restoring $file from backup: $backup"
+    cp "$backup" "$file"
+    return 0
+  else
+    echo "  ❌ No backup found for $file"
+    return 1
+  fi
+}
+
+# Validate critical state files
+STATE_FILES=(
+  ".claude/sdk_complete.json"
+  ".claude/handoff-context.json"
+  "feature_list.json"
+)
+
+CORRUPTED=false
+for file in "${STATE_FILES[@]}"; do
+  if [ -f "$file" ]; then
+    validate_json "$file"
+    status=$?
+
+    if [ $status -eq 2 ]; then
+      echo "  ⚠️  $file is corrupted"
+      CORRUPTED=true
+
+      if restore_from_backup "$file"; then
+        # Re-validate after restoration
+        if validate_json "$file"; then
+          echo "  ✅ Successfully restored $file"
+        else
+          echo "  ❌ Restored file is still invalid"
+          exit 1
+        fi
+      else
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "❌ CRITICAL: State file corrupted with no valid backup"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "File: $file"
+        echo ""
+        echo "Manual Recovery Steps:"
+        echo "  1. Check .claude/sdk-bridge.log for errors"
+        echo "  2. Look for .bak files: ls -la ${file}.*.bak"
+        echo "  3. Manually restore from git if available: git checkout $file"
+        echo "  4. Re-run SDK agent if necessary: /sdk-bridge:handoff"
+        echo ""
+        exit 1
+      fi
+    fi
+  fi
+done
+
+# Create timestamped backups before proceeding
+if [ "$CORRUPTED" = "false" ]; then
+  echo "  ✅ All state files validated"
+  echo ""
+  echo "Creating safety backups..."
+
+  TIMESTAMP=$(date +"%s")
+  for file in "${STATE_FILES[@]}"; do
+    if [ -f "$file" ]; then
+      cp "$file" "${file}.${TIMESTAMP}.bak"
+      echo "  📦 Backed up: ${file}"
+    fi
+  done
+
+  echo ""
+fi
+```
+
 ## Part 1: Executive Summary
 
 ```bash
