@@ -8,6 +8,31 @@
   },
   "license": "MIT",
   "repository": "https://github.com/flight505/sdk-bridge-marketplace",
+  "homepage": "https://github.com/flight505/sdk-bridge-marketplace",
   "keywords": ["agent-sdk", "automation", "long-running", "harness", "handoff", "generative-ui", "proactive"],
-  "homepage": "https://github.com/flight505/sdk-bridge-marketplace"
+  "category": "workflows",
+  "commands": [
+    "./commands/lra-setup.md",
+    "./commands/start.md",
+    "./commands/watch.md",
+    "./commands/status.md",
+    "./commands/resume.md",
+    "./commands/cancel.md",
+    "./commands/init.md",
+    "./commands/handoff.md",
+    "./commands/plan.md",
+    "./commands/enable-parallel.md",
+    "./commands/approve.md",
+    "./commands/observe.md"
+  ],
+  "agents": [
+    "./agents/handoff-validator.md",
+    "./agents/completion-reviewer.md"
+  ],
+  "skills": [
+    "./skills/sdk-bridge-patterns"
+  ],
+  "hooks": {
+    "SessionStart": "./hooks/scripts/check-sdk-completion.sh"
+  }
 }

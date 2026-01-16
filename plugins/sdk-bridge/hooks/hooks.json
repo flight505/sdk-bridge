@@ -24,18 +24,6 @@
           }
         ]
       }
-    ],
-    "UserPromptSubmit": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "SDK Bridge passive progress monitor + context-aware help. Execute in this order:\n\n**STEP 1: Passive Progress (if SDK running)**\nCheck if .claude/sdk-bridge.pid exists AND .claude/handoff-context.json exists. If both exist:\n1. Read PID from .claude/sdk-bridge.pid\n2. Verify process is running (check if PID is in process list)\n3. If running: Parse .claude/handoff-context.json for session_count, mode. Parse feature_list.json to count total features and passing features (where passes > 0).\n4. Calculate progress: (passing_features / total_features) * 100\n5. Show lightweight progress indicator (1-2 lines, use emojis sparingly):\n   Example: \"🔄 SDK Bridge: 3/5 features complete (60%) | Session 12/20 | Mode: sequential\"\n6. If mode is parallel and .claude/execution-plan.json exists, show estimated speedup.\n7. Keep it concise - user is trying to work, not monitor!\n\n**STEP 2: Context-Aware Help (if SDK Bridge question)**\nAnalyze user prompt for SDK Bridge context. Only respond if question is SDK Bridge-related. Check for these patterns:\n- 'how do I start' or 'getting started' → suggest /sdk-bridge:start for guided setup\n- 'what's the status' or 'check progress' → suggest /sdk-bridge:watch for live monitoring or /sdk-bridge:status\n- 'taking too long' or 'slow' → explain hybrid loops reduce retries, suggest checking .claude/sdk-bridge.log\n- 'is it done' or 'finished' → check if .claude/sdk_complete.json exists and guide accordingly\n- 'how to cancel' or 'stop' → explain /sdk-bridge:cancel\n- 'errors' or 'failed' → suggest /sdk-bridge:resume for detailed status\n\n**IMPORTANT**: If neither progress to show NOR SDK Bridge question detected, return empty systemMessage. Don't spam the user!",
-            "timeout": 10
-          }
-        ]
-      }
     ]
   }
 }
