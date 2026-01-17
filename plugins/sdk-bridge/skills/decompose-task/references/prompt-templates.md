@@ -11,6 +11,7 @@ Commands use these templates to ensure consistent, high-quality decompositions.
 
 Use this for general task decomposition:
 
+<!-- START: STANDARD_PROMPT -->
 ```
 You are decomposing a software development task into executable features for an autonomous agent.
 
@@ -20,7 +21,6 @@ You are decomposing a software development task into executable features for an 
 **YOUR JOB:**
 Generate a valid JSON array of features following this exact schema:
 
-```json
 [
   {
     "id": "feat-001",
@@ -32,7 +32,6 @@ Generate a valid JSON array of features following this exact schema:
     "passes": false
   }
 ]
-```
 
 **MANDATORY CONSTRAINTS:**
 
@@ -51,7 +50,12 @@ Generate a valid JSON array of features following this exact schema:
 - `test`: Concrete verification (CLI output, API response, file check)
 - `dependencies`: Array of feat-XXX IDs (empty array if none)
 - `tags`: Array of strings (layer + domain)
-- `priority`: Integer 0-100 (100 = highest)
+- `priority`: Integer 0-100 (higher = more important)
+  - 90-100: Infrastructure, critical foundations
+  - 70-89: Core features, business logic
+  - 50-69: API/Interface implementations
+  - 30-49: Integration, enhancements
+  - 0-29: Polish, optimizations
 - `passes`: Always false initially
 
 **EXAMPLE:**
@@ -104,6 +108,7 @@ Output:
 
 Output ONLY the JSON array, no additional text.
 ```
+<!-- END: STANDARD_PROMPT -->
 
 ---
 
@@ -115,8 +120,8 @@ Commands should invoke this prompt template like:
 # Read template
 PROMPT_TEMPLATE=$(cat "${CLAUDE_PLUGIN_ROOT}/skills/decompose-task/references/prompt-templates.md")
 
-# Extract standard prompt section (between first two ```)
-DECOMP_PROMPT=$(echo "$PROMPT_TEMPLATE" | sed -n '/^```$/,/^```$/p' | sed '1d;$d')
+# Extract standard prompt section (using HTML comment markers)
+DECOMP_PROMPT=$(echo "$PROMPT_TEMPLATE" | sed -n '/^<!-- START: STANDARD_PROMPT -->$/,/^<!-- END: STANDARD_PROMPT -->$/p' | sed '1d;$d')
 
 # Substitute user input
 USER_TASK="Build a todo list API"
