@@ -179,12 +179,21 @@
 **Dependencies:** Valid DAG ✓
 - No cycles
 - All refs exist
-- Topological ordering: feat-001 → feat-002 → feat-003/feat-006 → feat-004/feat-005/feat-007 → feat-008/feat-009 → feat-010/feat-011
+- Topological ordering (by dependency levels):
+  - Level 0: feat-001
+  - Level 1: feat-002
+  - Level 2: feat-003, feat-006
+  - Level 3: feat-004
+  - Level 4: feat-005
+  - Level 5: feat-007
+  - Level 6: feat-008, feat-009
+  - Level 7: feat-010, feat-011
 
 **Test Criteria:** All concrete ✓
-- "npm run build succeeds" - verifiable
-- "Returns array of todos" - verifiable
-- "404 if not found" - verifiable
+- "npm run build succeeds" - verifiable ✓
+- "Returns array of todos" - verifiable ✓
+- "404 if not found" - includes failure case ✓
+- Note: Best practice is including both success AND failure scenarios in test criteria
 
 **DRY:** No duplicates ✓
 - Auth logic in one place (feat-007)
