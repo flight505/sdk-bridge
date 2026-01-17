@@ -658,3 +658,60 @@ if __name__ == "__main__":
     # Cleanup
     import os
     os.unlink(temp_path)
+
+
+def build_graph_from_feature_list_data(features: List[Dict[str, Any]]) -> DependencyGraph:
+    """
+    Build DependencyGraph from feature list data.
+
+    Args:
+        features: List of feature dictionaries
+
+    Returns:
+        Populated DependencyGraph instance
+    """
+    graph = DependencyGraph()
+
+    for feature in features:
+        graph.add_feature(feature)
+
+    return graph
+
+
+def reorder_by_topology(features: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Reorder features array into topologically sorted order.
+
+    Features with no dependencies come first.
+    Features at same dependency level maintain relative order (stable sort).
+
+    Args:
+        features: List of feature dictionaries
+
+    Returns:
+        Reordered list of features in execution order
+
+    Raises:
+        ValueError: If dependency graph has cycles or invalid refs
+    """
+    # Build graph
+    graph = build_graph_from_feature_list_data(features)
+
+    # Validate dependencies first
+    validation = validate_dependencies(graph)
+    if not validation.is_valid:
+        raise ValueError(f"Cannot reorder - invalid dependencies: {', '.join(validation.errors)}")
+
+    # Get topological order (returns List[List[str]] - levels)
+    levels = graph.topological_sort()
+
+    # Flatten levels into single list of IDs
+    sorted_ids = []
+    for level in levels:
+        sorted_ids.extend(level)
+
+    # Reorder features array
+    id_to_feature = {f["id"]: f for f in features}
+    reordered = [id_to_feature[feat_id] for feat_id in sorted_ids]
+
+    return reordered
