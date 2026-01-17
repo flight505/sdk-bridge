@@ -664,6 +664,11 @@ def build_graph_from_feature_list_data(features: List[Dict[str, Any]]) -> Depend
     """
     Build DependencyGraph from feature list data.
 
+    Uses two-pass approach to ensure dependency tracking works correctly
+    regardless of feature order:
+    - Pass 1: Create all nodes (without edges)
+    - Pass 2: Add all edges (now all nodes exist, so dependents are correctly updated)
+
     Args:
         features: List of feature dictionaries
 
@@ -672,8 +677,41 @@ def build_graph_from_feature_list_data(features: List[Dict[str, Any]]) -> Depend
     """
     graph = DependencyGraph()
 
+    # Pass 1: Add all nodes first (without edges)
     for feature in features:
-        graph.add_feature(feature)
+        feat_id = feature.get("id", f"feat-{len(graph.nodes) + 1}")
+        description = feature.get("description", "")
+        tags = feature.get("tags", [])
+        priority = feature.get("priority", 50)
+        risk_score = feature.get("risk_score", 0.5)
+        complexity = feature.get("complexity", 0.5)
+        passes = feature.get("passes", False)
+
+        # Create node directly without calling add_feature
+        # (add_feature would try to create edges before all nodes exist)
+        node = FeatureNode(
+            id=feat_id,
+            description=description,
+            dependencies=[],  # Will add edges in pass 2
+            tags=tags,
+            priority=priority,
+            risk_score=risk_score,
+            complexity=complexity,
+            passes=passes
+        )
+        graph.nodes[feat_id] = node
+
+    # Pass 2: Add all edges now that all nodes exist
+    for feature in features:
+        feat_id = feature.get("id", f"feat-{len(graph.nodes)}")
+        dependencies = feature.get("dependencies", [])
+
+        # Update node's dependencies list
+        graph.nodes[feat_id].dependencies = dependencies
+
+        # Add edges (now all nodes exist, so dependents will be correctly updated)
+        for dep_id in dependencies:
+            graph.add_edge(dep_id, feat_id)
 
     return graph
 
