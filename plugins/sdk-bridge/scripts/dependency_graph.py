@@ -458,6 +458,128 @@ def validate_schema(features: List[Dict[str, Any]]) -> ValidationResult:
     return ValidationResult(is_valid=is_valid, errors=errors, warnings=warnings)
 
 
+def _detect_cycles(graph: DependencyGraph) -> List[List[str]]:
+    """
+    Detect cycles in dependency graph using DFS.
+
+    Returns:
+        List of cycles, where each cycle is a list of node IDs
+    """
+    cycles = []
+    visited = set()
+    rec_stack = set()
+
+    def dfs(node_id: str, path: List[str]):
+        visited.add(node_id)
+        rec_stack.add(node_id)
+        path.append(node_id)
+
+        if node_id not in graph.nodes:
+            return
+
+        for dep in graph.nodes[node_id].dependencies:
+            if dep not in visited:
+                dfs(dep, path.copy())
+            elif dep in rec_stack:
+                # Found cycle
+                cycle_start = path.index(dep)
+                cycles.append(path[cycle_start:] + [dep])
+
+        rec_stack.remove(node_id)
+
+    for node_id in graph.nodes:
+        if node_id not in visited:
+            dfs(node_id, [])
+
+    return cycles
+
+
+def _calculate_depth(graph: DependencyGraph, node_id: str, visited: Optional[Set[str]] = None) -> int:
+    """Calculate maximum depth of dependency tree for a node."""
+    if visited is None:
+        visited = set()
+
+    if node_id in visited:
+        return 0  # Cycle or already processed
+
+    visited.add(node_id)
+
+    if node_id not in graph.nodes or not graph.nodes[node_id].dependencies:
+        return 0
+
+    max_child_depth = 0
+    for dep in graph.nodes[node_id].dependencies:
+        depth = _calculate_depth(graph, dep, visited.copy())
+        if depth > max_child_depth:
+            max_child_depth = depth
+
+    return max_child_depth + 1
+
+
+def validate_dependencies(graph: DependencyGraph) -> ValidationResult:
+    """
+    Validate dependency graph.
+
+    Checks:
+    - All dependency IDs exist in feature list
+    - No circular dependencies (detect cycles)
+    - No self-dependencies
+    - Topological sort possible
+
+    Args:
+        graph: DependencyGraph instance
+
+    Returns:
+        ValidationResult with errors and warnings
+    """
+    errors = []
+    warnings = []
+
+    all_ids = set(graph.nodes.keys())
+
+    # Check each node's dependencies
+    for node_id, node in graph.nodes.items():
+        for dep in node.dependencies:
+            # Check self-dependency
+            if dep == node_id:
+                errors.append(f"Feature {node_id} has self-dependency")
+
+            # Check dependency exists
+            if dep not in all_ids:
+                errors.append(f"Feature {node_id} depends on non-existent feature: {dep}")
+
+    # Detect cycles
+    cycles = _detect_cycles(graph)
+    if cycles:
+        for cycle in cycles:
+            cycle_str = " → ".join(cycle)
+            errors.append(f"Circular dependency detected: {cycle_str}")
+
+    # Check if topological sort is possible
+    if not cycles:
+        try:
+            sorted_levels = graph.topological_sort()
+            # topological_sort returns list of lists (levels), so flatten to count features
+            total_sorted = sum(len(level) for level in sorted_levels)
+            if total_sorted != len(all_ids):
+                warnings.append(f"Topological sort produced {total_sorted} features, expected {len(all_ids)}")
+        except Exception as e:
+            errors.append(f"Topological sort failed: {str(e)}")
+
+    # Dependency depth check (warning only)
+    max_depth = 0
+    for node_id in all_ids:
+        depth = _calculate_depth(graph, node_id)
+        if depth > max_depth:
+            max_depth = depth
+
+    if max_depth > 5:
+        warnings.append(f"Deep dependency chain detected: {max_depth} levels (consider flattening)")
+
+    is_valid = len(errors) == 0
+    return ValidationResult(is_valid=is_valid, errors=errors, warnings=warnings)
+
+
 # CLI for testing
 if __name__ == "__main__":
     import sys
