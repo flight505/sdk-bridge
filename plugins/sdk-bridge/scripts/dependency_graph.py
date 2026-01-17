@@ -19,10 +19,21 @@ import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Set, Optional, Tuple
+from typing import Dict, List, Set, Optional, Tuple, Any
 
 
 logger = logging.getLogger("dependency_graph")
+
+
+@dataclass
+class ValidationResult:
+    """Result of validation check."""
+    is_valid: bool
+    errors: List[str]
+    warnings: List[str]
+
+    def __bool__(self):
+        return self.is_valid
 
 
 @dataclass
@@ -343,6 +354,108 @@ def build_graph_from_feature_list(feature_list_path: str) -> DependencyGraph:
     logger.info(f"Built graph: {len(graph.nodes)} features, {len(graph.edges)} dependencies")
 
     return graph
+
+
+def validate_schema(features: List[Dict[str, Any]]) -> ValidationResult:
+    """
+    Validate feature_list.json schema.
+
+    Checks:
+    - Valid JSON array
+    - Required fields present: id, description, passes
+    - Optional fields typed correctly: dependencies (list), priority (int)
+    - No duplicate IDs
+    - ID format valid (no spaces, special chars)
+
+    Args:
+        features: List of feature dictionaries
+
+    Returns:
+        ValidationResult with errors and warnings
+    """
+    errors = []
+    warnings = []
+
+    # Check it's a list
+    if not isinstance(features, list):
+        errors.append("feature_list.json must be a JSON array")
+        return ValidationResult(is_valid=False, errors=errors, warnings=warnings)
+
+    # Check not empty
+    if len(features) == 0:
+        warnings.append("Feature list is empty")
+
+    seen_ids = set()
+
+    for idx, feature in enumerate(features):
+        # Check it's a dict
+        if not isinstance(feature, dict):
+            errors.append(f"Feature at index {idx} is not an object")
+            continue
+
+        # Check required fields
+        required = ["id", "description", "passes"]
+        for field in required:
+            if field not in feature:
+                errors.append(f"Feature at index {idx} missing required field: {field}")
+
+        # Check id format
+        if "id" in feature:
+            feat_id = feature["id"]
+            if not isinstance(feat_id, str):
+                errors.append(f"Feature at index {idx}: id must be string, got {type(feat_id)}")
+            elif " " in feat_id or not feat_id.strip():
+                errors.append(f"Feature at index {idx}: id '{feat_id}' contains whitespace or is empty")
+
+            # Check for duplicates
+            if feat_id in seen_ids:
+                errors.append(f"Duplicate feature ID: {feat_id}")
+            seen_ids.add(feat_id)
+
+        # Check description
+        if "description" in feature:
+            desc = feature["description"]
+            if not isinstance(desc, str):
+                errors.append(f"Feature {feature.get('id', idx)}: description must be string")
+            elif len(desc) < 10:
+                warnings.append(f"Feature {feature.get('id', idx)}: description very short ({len(desc)} chars)")
+            elif len(desc) > 200:
+                warnings.append(f"Feature {feature.get('id', idx)}: description very long ({len(desc)} chars)")
+
+        # Check passes field
+        if "passes" in feature:
+            passes = feature["passes"]
+            if not isinstance(passes, bool):
+                errors.append(f"Feature {feature.get('id', idx)}: passes must be boolean, got {type(passes)}")
+
+        # Check optional fields
+        if "dependencies" in feature:
+            deps = feature["dependencies"]
+            if not isinstance(deps, list):
+                errors.append(f"Feature {feature.get('id', idx)}: dependencies must be array, got {type(deps)}")
+            else:
+                for dep in deps:
+                    if not isinstance(dep, str):
+                        errors.append(f"Feature {feature.get('id', idx)}: dependency must be string, got {type(dep)}")
+
+        if "priority" in feature:
+            priority = feature["priority"]
+            if not isinstance(priority, (int, float)):
+                errors.append(f"Feature {feature.get('id', idx)}: priority must be number, got {type(priority)}")
+            elif priority < 0 or priority > 100:
+                warnings.append(f"Feature {feature.get('id', idx)}: priority {priority} outside typical range 0-100")
+
+        if "tags" in feature:
+            tags = feature["tags"]
+            if not isinstance(tags, list):
+                errors.append(f"Feature {feature.get('id', idx)}: tags must be array, got {type(tags)}")
+
+        # Check for test criteria (warning only)
+        if "test" not in feature or not feature["test"]:
+            warnings.append(f"Feature {feature.get('id', idx)}: missing test criteria")
+
+    is_valid = len(errors) == 0
+    return ValidationResult(is_valid=is_valid, errors=errors, warnings=warnings)
 
 
 # CLI for testing
