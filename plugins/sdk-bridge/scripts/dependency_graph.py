@@ -580,86 +580,6 @@ def validate_dependencies(graph: DependencyGraph) -> ValidationResult:
     return ValidationResult(is_valid=is_valid, errors=errors, warnings=warnings)
 
 
-# CLI for testing
-if __name__ == "__main__":
-    import sys
-
-    logging.basicConfig(level=logging.INFO)
-
-    # Test with sample features
-    sample_features = [
-        {
-            "id": "feat-001",
-            "description": "Set up Express.js server",
-            "tags": ["backend", "setup"],
-            "priority": 10,
-            "passes": False
-        },
-        {
-            "id": "feat-002",
-            "description": "Add JWT authentication middleware",
-            "tags": ["auth", "security"],
-            "priority": 8,
-            "passes": False,
-            "dependencies": ["feat-001"]
-        },
-        {
-            "id": "feat-003",
-            "description": "Create user registration endpoint (requires auth)",
-            "tags": ["api", "auth"],
-            "priority": 8,
-            "passes": False
-        },
-        {
-            "id": "feat-004",
-            "description": "Add database schema for users",
-            "tags": ["database"],
-            "priority": 9,
-            "passes": False,
-            "dependencies": ["feat-001"]
-        },
-        {
-            "id": "feat-005",
-            "description": "Implement user profile API (protected endpoint)",
-            "tags": ["api"],
-            "priority": 5,
-            "passes": False
-        }
-    ]
-
-    # Save to temp file
-    import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-        json.dump(sample_features, f)
-        temp_path = f.name
-
-    # Build graph
-    graph = build_graph_from_feature_list(temp_path)
-
-    print("\n" + graph.visualize_ascii())
-
-    # Create execution plan
-    plan = graph.create_execution_plan(max_parallel_workers=3)
-
-    print("\nExecution Plan:")
-    print("=" * 50)
-    print(f"Total Features: {plan.total_features}")
-    print(f"Max Parallel Workers: {plan.max_parallel_workers}")
-    print(f"Estimated Duration: {plan.estimated_total_minutes} minutes")
-    print(f"Critical Path: {' → '.join(plan.critical_path)}")
-    print()
-
-    for level in plan.levels:
-        print(f"Level {level.level}: {len(level.features)} feature(s), parallelism={level.max_parallelism}")
-        for feat_id in level.features:
-            print(f"  - {feat_id}: {graph.nodes[feat_id].description}")
-        print()
-
-    # Cleanup
-    import os
-    os.unlink(temp_path)
-
-
 def build_graph_from_feature_list_data(features: List[Dict[str, Any]]) -> DependencyGraph:
     """
     Build DependencyGraph from feature list data.
@@ -753,3 +673,101 @@ def reorder_by_topology(features: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     reordered = [id_to_feature[feat_id] for feat_id in sorted_ids]
 
     return reordered
+
+
+def main():
+    """CLI interface for dependency graph operations."""
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(description="Validate and analyze feature dependency graphs")
+    parser.add_argument("command", choices=["validate", "reorder", "visualize"],
+                       help="Command to run")
+    parser.add_argument("file", help="Path to feature_list.json")
+    parser.add_argument("--output", "-o", help="Output file (for reorder command)")
+
+    args = parser.parse_args()
+
+    # Load feature list
+    try:
+        with open(args.file, 'r') as f:
+            features = json.load(f)
+    except FileNotFoundError:
+        print(f"❌ File not found: {args.file}", file=sys.stderr)
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"❌ Invalid JSON: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # Execute command
+    if args.command == "validate":
+        # Schema validation
+        schema_result = validate_schema(features)
+        print("━" * 60)
+        print("   SCHEMA VALIDATION")
+        print("━" * 60)
+        if schema_result.is_valid:
+            print(f"✅ Valid ({len(features)} features)")
+        else:
+            print("❌ Invalid")
+            for error in schema_result.errors:
+                print(f"  • {error}")
+
+        if schema_result.warnings:
+            print("\n⚠️  Warnings:")
+            for warning in schema_result.warnings:
+                print(f"  • {warning}")
+
+        # Dependency validation
+        print("\n" + "━" * 60)
+        print("   DEPENDENCY VALIDATION")
+        print("━" * 60)
+
+        try:
+            graph = build_graph_from_feature_list_data(features)
+            deps_result = validate_dependencies(graph)
+
+            if deps_result.is_valid:
+                print("✅ Valid (no cycles, all refs exist)")
+            else:
+                print("❌ Invalid")
+                for error in deps_result.errors:
+                    print(f"  • {error}")
+
+            if deps_result.warnings:
+                print("\n⚠️  Warnings:")
+                for warning in deps_result.warnings:
+                    print(f"  • {warning}")
+        except Exception as e:
+            print(f"❌ Failed to build graph: {e}", file=sys.stderr)
+            sys.exit(1)
+
+        # Exit code
+        if not schema_result.is_valid or not deps_result.is_valid:
+            sys.exit(1)
+
+    elif args.command == "reorder":
+        try:
+            reordered = reorder_by_topology(features)
+
+            output_file = args.output or args.file
+            with open(output_file, 'w') as f:
+                json.dump(reordered, f, indent=2)
+
+            print(f"✅ Reordered {len(reordered)} features topologically")
+            print(f"   Saved to: {output_file}")
+        except Exception as e:
+            print(f"❌ Reorder failed: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif args.command == "visualize":
+        try:
+            graph = build_graph_from_feature_list_data(features)
+            print(graph.visualize_ascii())
+        except Exception as e:
+            print(f"❌ Visualization failed: {e}", file=sys.stderr)
+            sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
