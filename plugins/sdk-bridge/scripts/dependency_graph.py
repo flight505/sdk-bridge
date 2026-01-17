@@ -678,8 +678,8 @@ def build_graph_from_feature_list_data(features: List[Dict[str, Any]]) -> Depend
     graph = DependencyGraph()
 
     # Pass 1: Add all nodes first (without edges)
-    for feature in features:
-        feat_id = feature.get("id", f"feat-{len(graph.nodes) + 1}")
+    for idx, feature in enumerate(features):
+        feat_id = feature.get("id", f"feat-{idx + 1}")
         description = feature.get("description", "")
         tags = feature.get("tags", [])
         priority = feature.get("priority", 50)
@@ -702,8 +702,8 @@ def build_graph_from_feature_list_data(features: List[Dict[str, Any]]) -> Depend
         graph.nodes[feat_id] = node
 
     # Pass 2: Add all edges now that all nodes exist
-    for feature in features:
-        feat_id = feature.get("id", f"feat-{len(graph.nodes)}")
+    for idx, feature in enumerate(features):
+        feat_id = feature.get("id", f"feat-{idx + 1}")
         dependencies = feature.get("dependencies", [])
 
         # Update node's dependencies list
