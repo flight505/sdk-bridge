@@ -12,3 +12,5 @@ __pycache__/
 # Hero image backups
 hero-original.png
 hero.png
+sdk-bridge-architecture_review_log.json
+sdk-bridge-architecture_v1.png
