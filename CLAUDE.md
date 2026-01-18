@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Current Version: v2.2.3** | Last Updated: 2026-01-16
+**Current Version: v3.0.0** | Last Updated: 2026-01-18
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a **Claude Code plugin marketplace** containing the `sdk-bridge` plugin. The plugin bridges Claude Code CLI with the Claude Agent SDK for long-running autonomous development tasks, implementing Anthropic's two-agent harness pattern.
 
-**Key Note**: As of v2.0.1, **SOTA Generative UI transformation is STABLE**. SDK Bridge features intelligent, proactive UX with AskUserQuestion-driven setup, TodoWrite progress tracking, and SessionStart hooks for completion detection. All backend v2.0 phases (hybrid loops, semantic memory, adaptive models, approvals, parallel execution) remain fully functional. **Note**: v2.0.1 removes the broken UserPromptSubmit hook that was blocking operations.
+**Key Note**: As of v3.0.0, **SDK Bridge is a true end-to-end autonomous development assistant**. The plugin now features intelligent task decomposition from natural language, dependency validation, interactive feature review, and automated topological ordering. No manual feature_list.json creation required. All backend v2.0 phases (hybrid loops, semantic memory, adaptive models, approvals, parallel execution) remain fully functional with enhanced UX.
 
 ## Version Management & Marketplace Sync
 
@@ -787,6 +787,39 @@ Based on analysis of existing marketplaces (claude-code-workflows):
 
 ## Recent Releases
 
+### v3.0.0 - End-to-End Transformation: Intelligent Task Decomposition (2026-01-18)
+- **TYPE**: Major release - architectural transformation
+- **BREAKING CHANGES**:
+  - Removed `/sdk-bridge:init`, `/sdk-bridge:handoff`, `/sdk-bridge:lra-setup` (deprecated in v2.2.3)
+  - See MIGRATION-v3.md for migration guide
+- **NEW PARADIGM**: "Execution engine requiring manual planning" → "End-to-end autonomous development assistant"
+- **NEW Commands**:
+  - `/sdk-bridge:decompose` - Intelligent task decomposition from natural language
+    - Three input modes: text description, markdown file, file + specific focus
+    - LLM-powered feature breakdown with dependency detection
+    - Interactive review with AskUserQuestion multi-select
+    - Computational validation (schema, dependencies, cycles, granularity)
+    - Automated topological ordering
+- **NEW Skills**:
+  - `decompose-task` - Task decomposition with DRY/YAGNI/TDD principles
+    - Software layer analysis (infrastructure → data → logic → interface)
+    - Priority scoring and test criteria generation
+    - Targets 5-25 features for optimal granularity
+- **ENHANCED Commands**:
+  - `/sdk-bridge:start` - Integrated Phase 1.5 Decomposition Flow
+    - Detects missing feature_list.json and offers assisted creation
+    - Handles existing plans with review/edit/replace options
+    - Seamless inline decomposition without context switching
+- **ENHANCED Infrastructure**:
+  - `dependency_graph.py` - Added ValidationResult class for comprehensive checks
+  - Schema validation, circular dependency detection, topological sorting
+  - Granularity heuristics (3-50 features, description length, dependency depth)
+- **ARCHITECTURE**: Commands: 9 → 10 (added decompose), Skills: 1 → 2 (added decompose-task)
+- **UX IMPACT**: 100% elimination of manual feature_list.json creation
+- **ADDRESSES**: Critical UX gap identified in architectural review (v3.md plan)
+- **FILES**: 8 changed, 1400+ insertions(+)
+- **COMMITS**: [to be added]
+
 ### v2.2.3 - Critical Fixes: Version Sync & Deprecation (2026-01-16)
 - **TYPE**: Critical bugfix + UX improvements
 - **CRITICAL FIX**: Updated version strings in init.md/start.md to match plugin version (2.2.2)
@@ -880,6 +913,7 @@ Based on analysis of existing marketplaces (claude-code-workflows):
 
 | Version | Date | Type | Key Changes |
 |---------|------|------|-------------|
+| v3.0.0 | 2026-01-18 | Major | **🎯 End-to-end transformation - Intelligent task decomposition, no manual planning** |
 | v2.2.3 | 2026-01-16 | Bugfix | **Critical version sync fix + deprecation warnings** |
 | v2.0.1 | 2026-01-16 | Bugfix | **Critical fix - Removed blocking UserPromptSubmit hook** |
 | v2.0.0 | 2026-01-11 | Major | **SOTA Generative UI - Interactive setup, live progress, intelligent UX** |

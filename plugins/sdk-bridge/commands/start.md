@@ -16,7 +16,7 @@ First, let me check if SDK Bridge is installed and up to date:
 # Check installation status silently
 HARNESS_DIR="$HOME/.claude/skills/long-running-agent/harness"
 VERSION_FILE="$HARNESS_DIR/.version"
-PLUGIN_VERSION="2.2.2"
+PLUGIN_VERSION="3.0.0"
 NEEDS_INSTALL="false"
 NEEDS_UPDATE="false"
 
@@ -117,7 +117,7 @@ fi
 deactivate
 
 # === STEP 5: Write Version File ===
-echo "2.2.2" > "$HOME/.claude/skills/long-running-agent/harness/.version"
+echo "3.0.0" > "$HOME/.claude/skills/long-running-agent/harness/.version"
 
 # === STEP 6: Validate Installation ===
 VENV_PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
@@ -153,75 +153,260 @@ Use TodoWrite to create:
 
 ## Phase 1: Project Prerequisites Check
 
-Check project-specific requirements (silent checks, only show final status):
+Check project-specific requirements (silent checks, then handle feature_list.json):
 
 ```bash
-# All checks silent, only output final status
-{
-  mkdir -p .claude
+# Check venv and SDK (should exist after Phase 0)
+VENV_PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
+if ! "$VENV_PYTHON" -c "import claude_agent_sdk" 2>/dev/null; then
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "❌ SDK Installation Failed"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "Could not import claude_agent_sdk."
+  echo ""
+  echo "Troubleshooting:"
+  echo "  • Check installation log: cat .claude/setup.log"
+  echo "  • Verify Python 3.8+ installed: python3 --version"
+  echo "  • Try manual installation: /sdk-bridge:lra-setup"
+  echo ""
+  exit 1
+fi
 
-  # Check feature list
-  if [ ! -f "feature_list.json" ]; then
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "❌ Missing feature_list.json"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-    echo "SDK Bridge requires a feature_list.json file to work."
-    echo ""
-    echo "Create this file with your features, for example:"
-    echo ""
-    cat << 'EXAMPLE'
-[
-  {
-    "id": "feature-1",
-    "description": "Add user authentication",
-    "passes": false
-  },
-  {
-    "id": "feature-2",
-    "description": "Create API endpoints",
-    "passes": false
-  }
-]
-EXAMPLE
-    echo ""
-    echo "Then run /sdk-bridge:start again."
-    echo ""
-    exit 1
-  fi
+# Check git (warning only)
+if ! command -v git &> /dev/null; then
+  echo "⚠️  git not found (recommended for version control)"
+fi
 
-  # Check venv and SDK (should exist after Phase 0)
-  VENV_PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
-  if ! "$VENV_PYTHON" -c "import claude_agent_sdk" 2>/dev/null; then
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "❌ SDK Installation Failed"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-    echo "Could not import claude_agent_sdk."
-    echo ""
-    echo "Troubleshooting:"
-    echo "  • Check installation log: cat .claude/setup.log"
-    echo "  • Verify Python 3.8+ installed: python3 --version"
-    echo "  • Try manual installation: /sdk-bridge:lra-setup"
-    echo ""
-    exit 1
-  fi
-
-  # Check git (warning only)
-  if ! command -v git &> /dev/null; then
-    echo "⚠️  git not found (recommended for version control)"
-  fi
-
-  echo "PREREQ_OK"
-} 2>/dev/null
+mkdir -p .claude
 ```
+
+### Check for feature_list.json
+
+Now check if feature list exists and handle accordingly:
+
+**If feature_list.json exists:**
+
+Use AskUserQuestion to ask user what to do:
+
+```
+question: "Found existing feature_list.json with N features. What would you like to do?"
+header: "Existing Plan"
+multiSelect: false
+options:
+  - label: "Use existing plan"
+    description: "Continue with the current feature_list.json as-is"
+  - label: "Review and edit"
+    description: "Load current features for review and modification"
+  - label: "Create new plan"
+    description: "Archive current file and create a fresh decomposition"
+```
+
+**If user selects "Use existing plan":**
+- Set `FEATURE_LIST_READY="true"`
+- Continue to Phase 2
+
+**If user selects "Review and edit":**
+- Read current feature_list.json
+- Jump to Phase 1.5 Interactive Review (with existing features pre-loaded)
+
+**If user selects "Create new plan":**
+- Archive existing: `mv feature_list.json feature_list.$(date +%Y%m%d_%H%M%S).backup`
+- Jump to Phase 1.5 Decomposition Flow
+
+**If feature_list.json does NOT exist:**
+- Proceed to Phase 1.5 Decomposition Flow
 
 Update TodoWrite:
 
 ```
 - ✅ Prerequisites validated
+- ⏳ Gathering task requirements
+- ⏳ Decomposing into features
+- ⏳ Validating dependencies
+- ⏳ Configuring setup options
+- ⏳ Creating configuration
+- ⏳ Launching autonomous agent
+```
+
+## Phase 1.5: Decomposition Flow (v3.0 Feature)
+
+This phase only runs if feature_list.json is missing or user chose "Create new plan".
+
+**Note:** The full decomposition logic is implemented in `/sdk-bridge:decompose` command. Here we invoke it inline to maintain seamless flow.
+
+### Step 1: Input Collection
+
+Update TodoWrite: ⏳ Gathering task requirements (in_progress)
+
+Ask user how they want to describe the task:
+
+```
+Use AskUserQuestion:
+
+question: "How would you like to describe what to build?"
+header: "Task Input"
+multiSelect: false
+options:
+  - label: "Type description now"
+    description: "Enter a natural language description. Best for simple projects."
+  - label: "Point to a .md file"
+    description: "Provide path to a markdown file with requirements/specs."
+  - label: "Point to .md with specific focus"
+    description: "Provide .md file path + specific instructions about what to implement."
+```
+
+Handle each input mode as described in `/sdk-bridge:decompose` command.
+
+Update TodoWrite: ✅ Task requirements collected
+
+### Step 2: Task Decomposition
+
+Update TodoWrite: ⏳ Decomposing into features (in_progress)
+
+Use the `decompose-task` skill to break down the task:
+
+```
+Use Skill tool:
+  skill: "decompose-task"
+
+Pass the task description to the skill. The skill will:
+- Parse requirements and identify tech stack
+- Identify software layers (infrastructure → data → logic → interface)
+- Generate features with dependencies, priorities, test criteria
+- Follow DRY/YAGNI/TDD principles
+- Target 5-25 features
+
+Store the generated features array as PROPOSED_FEATURES.
+```
+
+Update TodoWrite: ✅ Features decomposed
+
+### Step 3: Interactive Review
+
+Update TodoWrite: ⏳ Reviewing features (in_progress)
+
+Present features for user review:
+
+```
+Use AskUserQuestion with multi-select:
+
+question: "Review the proposed features. Uncheck any you want to exclude."
+header: "Feature Review"
+multiSelect: true
+options:
+  # One option per feature, format:
+  - label: "[feat-001] Set up Express.js server"
+    description: "Priority: 100 | Dependencies: none | Test: GET /health returns 200"
+  # ... more features
+```
+
+After initial selection, offer customization:
+
+```
+Use AskUserQuestion:
+
+question: "Would you like to make any changes?"
+header: "Customize"
+multiSelect: false
+options:
+  - label: "Looks good - proceed to validation"
+    description: "Accept the selected features and continue"
+  - label: "Add more features"
+    description: "Describe additional features to add"
+  - label: "Regenerate completely"
+    description: "Start over with refined description"
+```
+
+Handle responses:
+- "Looks good" → Continue to Step 4
+- "Add more" → Re-invoke decompose-task skill with additions, loop back to review
+- "Regenerate" → Ask for refined description, restart from Step 2
+
+Update TodoWrite: ✅ Features reviewed and selected
+
+### Step 4: Validation
+
+Update TodoWrite: ⏳ Validating dependencies (in_progress)
+
+Validate using dependency_graph.py:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# Write selected features to temp file
+TEMP_FEATURES=$(mktemp)
+echo "$SELECTED_FEATURES_JSON" > "$TEMP_FEATURES"
+
+# Validate
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dependency_graph.py" validate "$TEMP_FEATURES"
+VALIDATION_EXIT=$?
+
+if [ $VALIDATION_EXIT -ne 0 ]; then
+  echo ""
+  echo "❌ Validation failed. Cannot proceed."
+  echo "Run /sdk-bridge:decompose to regenerate with corrections."
+  rm -f "$TEMP_FEATURES"
+  exit 1
+fi
+
+rm -f "$TEMP_FEATURES"
+```
+
+If validation passes with warnings, ask user to confirm proceeding.
+
+Update TodoWrite: ✅ Validation complete
+
+### Step 5: Generate feature_list.json
+
+Update TodoWrite: ⏳ Generating feature_list.json (in_progress)
+
+Reorder features topologically and save:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# Write selected features to temp file
+TEMP_INPUT=$(mktemp)
+echo "$SELECTED_FEATURES_JSON" > "$TEMP_INPUT"
+
+# Reorder topologically
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dependency_graph.py" reorder "$TEMP_INPUT" --output feature_list.json
+
+# Clean up
+rm -f "$TEMP_INPUT"
+
+# Create decomposition log
+cat > .claude/decomposition-log.json << EOF
+{
+  "version": "3.0.0",
+  "created_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "input_mode": "$INPUT_MODE",
+  "features_accepted": $(jq 'length' feature_list.json)
+}
+EOF
+
+echo ""
+echo "✅ Created feature_list.json with $(jq 'length' feature_list.json) features"
+echo "✅ Saved metadata to .claude/decomposition-log.json"
+echo ""
+```
+
+Update TodoWrite: ✅ Feature list generated
+
+Set `FEATURE_LIST_READY="true"` and continue to Phase 2.
+
+Update TodoWrite:
+
+```
+- ✅ Prerequisites validated
+- ✅ Task requirements collected
+- ✅ Features decomposed
+- ✅ Validation complete
+- ✅ Feature list generated
 - ⏳ Configuring setup options
 - ⏳ Creating configuration
 - ⏳ Launching autonomous agent
@@ -716,7 +901,7 @@ fi
 # Create handoff context (silent)
 cat > .claude/handoff-context.json << EOF
 {
-  "version": "2.2.2",
+  "version": "3.0.0",
   "handoff_time": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "mode": "$EXECUTION_MODE",
   "model": "$MODEL",

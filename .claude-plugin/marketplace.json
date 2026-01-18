@@ -5,15 +5,15 @@
     "url": "https://github.com/flight505"
   },
   "metadata": {
-    "description": "SOTA autonomous development with intelligent UX: proactive setup, live progress, context-aware guidance",
-    "version": "2.2.3"
+    "description": "End-to-end autonomous development: intelligent task decomposition, interactive setup, dependency validation, live progress",
+    "version": "3.0.0"
   },
   "plugins": [
     {
       "name": "sdk-bridge",
       "source": "./plugins/sdk-bridge",
-      "description": "SOTA autonomous development with generative UI: interactive setup, live progress, intelligent resume, context-aware help",
-      "version": "2.2.3",
+      "description": "End-to-end autonomous development assistant: intelligent task decomposition, interactive setup, dependency validation, live progress tracking",
+      "version": "3.0.0",
       "author": {
         "name": "flight505",
         "url": "https://github.com/flight505"
@@ -27,12 +27,15 @@
         "harness",
         "handoff",
         "autonomous",
-        "multi-session"
+        "multi-session",
+        "task-decomposition",
+        "generative-ui"
       ],
       "category": "workflows",
       "strict": true,
       "commands": [
         "./commands/start.md",
+        "./commands/decompose.md",
         "./commands/watch.md",
         "./commands/status.md",
         "./commands/resume.md",
@@ -47,7 +50,8 @@
         "./agents/completion-reviewer.md"
       ],
       "skills": [
-        "./skills/sdk-bridge-patterns"
+        "./skills/sdk-bridge-patterns",
+        "./skills/decompose-task"
       ]
     }
   ]

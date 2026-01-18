@@ -1,16 +1,18 @@
 # SDK Bridge Plugin
 
-Bridge Claude Code CLI and Agent SDK for seamless hybrid workflows. Hand off long-running tasks to autonomous SDK agents, then resume in CLI when complete.
+**v3.0**: End-to-end autonomous development assistant with intelligent task decomposition, dependency validation, and automated planning.
 
 ## Overview
 
-The SDK Bridge plugin provides a **self-contained** autonomous agent harness with CLI-integrated workflow:
+The SDK Bridge plugin transforms natural language descriptions into fully implemented features through intelligent decomposition and autonomous execution:
 
-1. **Setup harness** (`/sdk-bridge:lra-setup` - first time only)
-2. **Plan interactively** in CLI (`/plan` creates feature_list.json)
-3. **Hand off to SDK** (`/sdk-bridge:handoff` launches autonomous agent)
-4. **Monitor progress** (`/sdk-bridge:status` checks feature completion)
-5. **Resume in CLI** (`/sdk-bridge:resume` reviews SDK work and continues)
+1. **Describe your task** in natural language or point to a spec document
+2. **Review AI-generated features** with interactive multi-select UI
+3. **Automatic validation** detects dependencies, cycles, and optimal ordering
+4. **Autonomous implementation** by SDK agent with live progress tracking
+5. **Comprehensive completion report** with file validation and next steps
+
+**No manual feature_list.json creation required.** The plugin handles task decomposition, dependency analysis, and execution planning automatically.
 
 ## Installation
 
@@ -25,26 +27,40 @@ Prerequisites:
 
 ## Quick Start
 
-## 🚨 Important: Use the v2.0 Workflow
+## 🚨 Important: Use the v3.0 Workflow
 
-If you're new to SDK Bridge, **skip the legacy workflow** and use the modern v2.0 approach below.
+If you're new to SDK Bridge, **use the modern v3.0 workflow** with intelligent task decomposition.
 
-### ✅ Recommended: v2.0 Workflow (One Command)
+### ✅ Recommended: v3.0 Workflow (Natural Language → Implementation)
+
+**Option 1: Fully integrated (one command)**
 
 ```bash
 /sdk-bridge:start
 ```
 
-This provides:
-- Interactive configuration via AskUserQuestion
-- Auto-installation if needed
-- Auto-launch (no separate /handoff)
-- Live progress tracking with TodoWrite
+If you don't have a `feature_list.json`, the command will:
+1. Ask how you want to describe your task (text, file, or file with focus)
+2. Decompose your description into structured features
+3. Show interactive review UI (multi-select to include/exclude features)
+4. Validate dependencies and detect cycles
+5. Configure execution settings (model, parallel, advanced features)
+6. Launch autonomous agent
+
+**Option 2: Decompose first, launch later**
+
+```bash
+/sdk-bridge:decompose "Build a REST API for todo list with authentication"
+# Reviews features, validates, creates feature_list.json
+
+/sdk-bridge:start
+# Detects existing plan, offers to use/edit/replace
+```
 
 **After SDK completes:**
 
 ```bash
-/sdk-bridge:resume   # Comprehensive completion report
+/sdk-bridge:resume   # Comprehensive completion report with file validation
 ```
 
 **Optional monitoring:**
@@ -115,8 +131,9 @@ Review SDK work, see completion report, continue in CLI.
 
 ## Commands
 
-### Primary Commands (v2.0+)
-- `/sdk-bridge:start` - **[RECOMMENDED]** Interactive setup & auto-launch
+### Primary Commands (v3.0+)
+- `/sdk-bridge:start` - **[RECOMMENDED]** Interactive setup with automatic task decomposition & launch
+- `/sdk-bridge:decompose` - **[NEW v3.0]** Intelligent task decomposition from natural language
 - `/sdk-bridge:watch` - Live progress monitoring with TodoWrite
 - `/sdk-bridge:status` - Quick status check
 - `/sdk-bridge:plan` - Analyze dependencies for parallel execution
@@ -126,10 +143,10 @@ Review SDK work, see completion report, continue in CLI.
 - `/sdk-bridge:resume` - Resume in CLI after completion
 - `/sdk-bridge:cancel` - Stop running SDK agent
 
-### Legacy Commands (v1.x - Deprecated)
-- `/sdk-bridge:init` - ⚠️ **DEPRECATED** - Use `/sdk-bridge:start` instead
-- `/sdk-bridge:handoff` - ⚠️ **DEPRECATED** - Now part of `/sdk-bridge:start`
-- `/sdk-bridge:lra-setup` - ⚠️ **DEPRECATED** - Auto-installs during `/sdk-bridge:start`
+### Legacy Commands (v1.x - Removed in v3.0)
+- `/sdk-bridge:init` - ❌ **REMOVED** - Use `/sdk-bridge:start` instead
+- `/sdk-bridge:handoff` - ❌ **REMOVED** - Now part of `/sdk-bridge:start`
+- `/sdk-bridge:lra-setup` - ❌ **REMOVED** - Auto-installs during `/sdk-bridge:start`
 
 ## Configuration
 
