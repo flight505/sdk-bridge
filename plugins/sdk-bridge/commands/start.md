@@ -1,1028 +1,163 @@
 ---
-description: "✅ RECOMMENDED: Interactive setup & auto-launch (one command)"
+description: "Start SDK Bridge interactive wizard - generates PRD, converts to JSON, and runs autonomous agent loop"
 argument-hint: ""
-allowed-tools: ["Bash", "Read", "Write", "AskUserQuestion", "TodoWrite", "Task"]
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Task", "AskUserQuestion", "TodoWrite"]
 ---
 
-# Start SDK Bridge - One Command Setup
+# SDK Bridge Start
 
-I'll set up and launch SDK Bridge with automatic installation and a clean interactive experience.
+Interactive wizard that guides you through the complete SDK Bridge workflow:
+1. Describe your project/feature
+2. Generate PRD with clarifying questions
+3. Review and approve PRD
+4. Convert to execution format
+5. Configure execution settings
+6. Launch autonomous agent loop
 
-## Phase 0: Silent Setup Detection
+## Execution
 
-First, let me check if SDK Bridge is installed and up to date:
+**Checkpoint 1: Check Dependencies**
 
-```bash
-# Check installation status silently
-HARNESS_DIR="$HOME/.claude/skills/long-running-agent/harness"
-VERSION_FILE="$HARNESS_DIR/.version"
-PLUGIN_VERSION="3.0.0"
-NEEDS_INSTALL="false"
-NEEDS_UPDATE="false"
-
-# Check if harness exists
-if [ ! -d "$HARNESS_DIR" ] || [ ! -f "$HARNESS_DIR/hybrid_loop_agent.py" ]; then
-  NEEDS_INSTALL="true"
-  echo "SETUP_REQUIRED"
-elif [ -f "$VERSION_FILE" ]; then
-  INSTALLED_VERSION=$(cat "$VERSION_FILE")
-  if [ "$INSTALLED_VERSION" != "$PLUGIN_VERSION" ]; then
-    NEEDS_UPDATE="true"
-    echo "UPDATE_AVAILABLE"
-  else
-    echo "UP_TO_DATE"
-  fi
-else
-  # Version file missing - assume needs update
-  NEEDS_UPDATE="true"
-  echo "UPDATE_AVAILABLE"
-fi
-```
-
-## Phase 0.5: Auto-Install/Update (Silent Background)
-
-If setup is required, use TodoWrite to show clean progress and install silently:
-
-**If SETUP_REQUIRED or UPDATE_AVAILABLE**, create initial progress tracker:
-
-```
-Use TodoWrite to create:
-- ⏳ Installing SDK Bridge harness
-- ⏳ Setting up Python environment
-- ⏳ Validating installation
-- ⏳ Checking project prerequisites
-- ⏳ Configuring setup options
-- ⏳ Creating configuration
-- ⏳ Launching autonomous agent
-```
-
-Then run silent installation:
+First, verify required dependencies are installed:
 
 ```bash
-#!/bin/bash
-set -euo pipefail
-
-SETUP_LOG=".claude/setup.log"
-mkdir -p .claude
-
-# Redirect all output to log file (silent for user)
-exec 1>>"$SETUP_LOG" 2>&1
-
-echo "[$(date)] Starting SDK Bridge installation..."
-
-# === STEP 1: Create Directories ===
-mkdir -p "$HOME/.claude/skills/long-running-agent/harness"
-
-# === STEP 2: Install Harness Scripts ===
-SCRIPTS=(
-  "autonomous_agent.py"
-  "hybrid_loop_agent.py"
-  "semantic_memory.py"
-  "model_selector.py"
-  "approval_system.py"
-  "dependency_graph.py"
-  "parallel_coordinator.py"
-)
-
-for script in "${SCRIPTS[@]}"; do
-  src="${CLAUDE_PLUGIN_ROOT}/scripts/$script"
-  dst="$HOME/.claude/skills/long-running-agent/harness/$script"
-
-  if [ -f "$src" ]; then
-    cp "$src" "$dst"
-    chmod +x "$dst"
-  fi
-done
-
-# === STEP 3: Create Virtual Environment ===
-VENV_DIR="$HOME/.claude/skills/long-running-agent/.venv"
-
-if [ ! -d "$VENV_DIR" ]; then
-  if command -v uv &> /dev/null; then
-    uv venv "$VENV_DIR"
-  else
-    python3 -m venv "$VENV_DIR"
-  fi
-fi
-
-# === STEP 4: Install SDK ===
-. "$VENV_DIR/bin/activate"
-
-if command -v uv &> /dev/null; then
-  uv pip install --quiet claude-agent-sdk
-else
-  pip install --quiet claude-agent-sdk
-fi
-
-deactivate
-
-# === STEP 5: Write Version File ===
-echo "3.0.0" > "$HOME/.claude/skills/long-running-agent/harness/.version"
-
-# === STEP 6: Validate Installation ===
-VENV_PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
-SDK_VERSION=$("$VENV_PYTHON" -c "import claude_agent_sdk; print(claude_agent_sdk.__version__)" 2>&1)
-
-echo "[$(date)] Installation complete. SDK version: $SDK_VERSION"
-
-# Signal success
-echo "INSTALL_SUCCESS"
+${CLAUDE_PLUGIN_ROOT}/scripts/check-deps.sh
 ```
 
-After installation completes, update TodoWrite:
+If dependencies are missing, use AskUserQuestion to ask:
+"SDK Bridge requires these tools: [list missing]. Install automatically?"
+- Options: "Yes - install for me" / "No - I'll install manually"
 
+If user approves automatic install:
+- For amp: `npm install -g @anthropic-ai/amp-cli`
+- For jq on macOS: `brew install jq`
+- For jq on Linux: Show instructions for apt/yum
+
+If user declines or install fails, show manual installation instructions and exit.
+
+**Checkpoint 2: Project Input**
+
+Use AskUserQuestion to ask:
+"Describe your feature or project. You can type a description or use @file to reference a spec/outline."
+
+Text field for user input (supports @file references).
+
+**Checkpoint 3: Generate PRD**
+
+Load the `prd-generator` skill using Task tool:
 ```
-- ✅ SDK Bridge harness installed
-- ✅ Python environment ready
-- ✅ Installation validated
-- ⏳ Checking project prerequisites
-- ⏳ Configuring setup options
-- ⏳ Creating configuration
-- ⏳ Launching autonomous agent
-```
-
-**If UP_TO_DATE**, skip to Phase 1 with initial progress tracker:
-
-```
-Use TodoWrite to create:
-- ⏳ Checking prerequisites
-- ⏳ Configuring setup options
-- ⏳ Creating configuration
-- ⏳ Launching autonomous agent
-```
-
-## Phase 1: Project Prerequisites Check
-
-Check project-specific requirements (silent checks, then handle feature_list.json):
-
-```bash
-# Check venv and SDK (should exist after Phase 0)
-VENV_PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
-if ! "$VENV_PYTHON" -c "import claude_agent_sdk" 2>/dev/null; then
-  echo ""
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "❌ SDK Installation Failed"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo ""
-  echo "Could not import claude_agent_sdk."
-  echo ""
-  echo "Troubleshooting:"
-  echo "  • Check installation log: cat .claude/setup.log"
-  echo "  • Verify Python 3.8+ installed: python3 --version"
-  echo "  • Try manual installation: /sdk-bridge:lra-setup"
-  echo ""
-  exit 1
-fi
-
-# Check git (warning only)
-if ! command -v git &> /dev/null; then
-  echo "⚠️  git not found (recommended for version control)"
-fi
-
-mkdir -p .claude
+Use the prd-generator skill to create a PRD based on the user's input: [user's description]
 ```
 
-### Check for feature_list.json
+The skill will:
+- Ask 3-5 clarifying questions with lettered options
+- Generate structured PRD
+- Save to `tasks/prd-[feature-name].md`
 
-Now check if feature list exists and handle accordingly:
+**Checkpoint 4: Review PRD**
 
-**If feature_list.json exists:**
+Detect user's editor and open the PRD file:
+- Try `code tasks/prd-[feature-name].md` (VSCode)
+- Or try `cursor tasks/prd-[feature-name].md` (Cursor)
+- If both fail, tell user: "Please review and edit `tasks/prd-[feature-name].md` in your editor"
 
-Use AskUserQuestion to ask user what to do:
-
-```
-question: "Found existing feature_list.json with N features. What would you like to do?"
-header: "Existing Plan"
-multiSelect: false
-options:
-  - label: "Use existing plan"
-    description: "Continue with the current feature_list.json as-is"
-  - label: "Review and edit"
-    description: "Load current features for review and modification"
-  - label: "Create new plan"
-    description: "Archive current file and create a fresh decomposition"
-```
-
-**If user selects "Use existing plan":**
-- Set `FEATURE_LIST_READY="true"`
-- Continue to Phase 2
-
-**If user selects "Review and edit":**
-- Read current feature_list.json
-- Jump to Phase 1.5 Interactive Review (with existing features pre-loaded)
-
-**If user selects "Create new plan":**
-- Archive existing: `mv feature_list.json feature_list.$(date +%Y%m%d_%H%M%S).backup`
-- Jump to Phase 1.5 Decomposition Flow
-
-**If feature_list.json does NOT exist:**
-- Proceed to Phase 1.5 Decomposition Flow
-
-Update TodoWrite:
-
-```
-- ✅ Prerequisites validated
-- ⏳ Gathering task requirements
-- ⏳ Decomposing into features
-- ⏳ Validating dependencies
-- ⏳ Configuring setup options
-- ⏳ Creating configuration
-- ⏳ Launching autonomous agent
-```
-
-## Phase 1.5: Decomposition Flow (v3.0 Feature)
-
-This phase only runs if feature_list.json is missing or user chose "Create new plan".
-
-**Note:** The full decomposition logic is implemented in `/sdk-bridge:decompose` command. Here we invoke it inline to maintain seamless flow.
-
-### Step 1: Input Collection
-
-Update TodoWrite: ⏳ Gathering task requirements (in_progress)
-
-Ask user how they want to describe the task:
-
-```
 Use AskUserQuestion:
+"Review the PRD in `tasks/prd-[feature-name].md`. Ready to proceed?"
+- Options: "Approved - convert to JSON" / "Need more edits - wait" / "Start over"
 
-question: "How would you like to describe what to build?"
-header: "Task Input"
-multiSelect: false
-options:
-  - label: "Type description now"
-    description: "Enter a natural language description. Best for simple projects."
-  - label: "Point to a .md file"
-    description: "Provide path to a markdown file with requirements/specs."
-  - label: "Point to .md with specific focus"
-    description: "Provide .md file path + specific instructions about what to implement."
+If "wait", pause and ask again after user confirms edits saved.
+If "start over", return to Checkpoint 2.
+
+**Checkpoint 5: Convert to JSON**
+
+Load the `prd-converter` skill using Task tool:
+```
+Use the prd-converter skill to convert tasks/prd-[feature-name].md to prd.json
 ```
 
-Handle each input mode as described in `/sdk-bridge:decompose` command.
+The skill will:
+- Convert markdown PRD to JSON format
+- Validate structure (IDs, priorities, acceptance criteria)
+- Save to `prd.json` in project root
 
-Update TodoWrite: ✅ Task requirements collected
+**Checkpoint 6: Execution Settings**
 
-### Step 2: Task Decomposition
+Create `.claude/sdk-bridge.local.md` configuration if it doesn't exist.
 
-Update TodoWrite: ⏳ Decomposing into features (in_progress)
+Use AskUserQuestion to collect settings:
 
-Use the `decompose-task` skill to break down the task:
+Question 1: "Max iterations before stopping?"
+- Default value: "10"
+- Text field for number
 
-```
-Use Skill tool:
-  skill: "decompose-task"
+Question 2: "Execution mode?"
+- Options: "Foreground (see live output)" / "Background (continue working)"
 
-Pass the task description to the skill. The skill will:
-- Parse requirements and identify tech stack
-- Identify software layers (infrastructure → data → logic → interface)
-- Generate features with dependencies, priorities, test criteria
-- Follow DRY/YAGNI/TDD principles
-- Target 5-25 features
-
-Store the generated features array as PROPOSED_FEATURES.
-```
-
-Update TodoWrite: ✅ Features decomposed
-
-### Step 3: Interactive Review
-
-Update TodoWrite: ⏳ Reviewing features (in_progress)
-
-Present features for user review:
-
-```
-Use AskUserQuestion with multi-select:
-
-question: "Review the proposed features. Uncheck any you want to exclude."
-header: "Feature Review"
-multiSelect: true
-options:
-  # One option per feature, format:
-  - label: "[feat-001] Set up Express.js server"
-    description: "Priority: 100 | Dependencies: none | Test: GET /health returns 200"
-  # ... more features
-```
-
-After initial selection, offer customization:
-
-```
-Use AskUserQuestion:
-
-question: "Would you like to make any changes?"
-header: "Customize"
-multiSelect: false
-options:
-  - label: "Looks good - proceed to validation"
-    description: "Accept the selected features and continue"
-  - label: "Add more features"
-    description: "Describe additional features to add"
-  - label: "Regenerate completely"
-    description: "Start over with refined description"
-```
-
-Handle responses:
-- "Looks good" → Continue to Step 4
-- "Add more" → Re-invoke decompose-task skill with additions, loop back to review
-- "Regenerate" → Ask for refined description, restart from Step 2
-
-Update TodoWrite: ✅ Features reviewed and selected
-
-### Step 4: Validation
-
-Update TodoWrite: ⏳ Validating dependencies (in_progress)
-
-Validate using dependency_graph.py:
-
-```bash
-#!/bin/bash
-set -euo pipefail
-
-# Write selected features to temp file
-TEMP_FEATURES=$(mktemp)
-echo "$SELECTED_FEATURES_JSON" > "$TEMP_FEATURES"
-
-# Validate
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dependency_graph.py" validate "$TEMP_FEATURES"
-VALIDATION_EXIT=$?
-
-if [ $VALIDATION_EXIT -ne 0 ]; then
-  echo ""
-  echo "❌ Validation failed. Cannot proceed."
-  echo "Run /sdk-bridge:decompose to regenerate with corrections."
-  rm -f "$TEMP_FEATURES"
-  exit 1
-fi
-
-rm -f "$TEMP_FEATURES"
-```
-
-If validation passes with warnings, ask user to confirm proceeding.
-
-Update TodoWrite: ✅ Validation complete
-
-### Step 5: Generate feature_list.json
-
-Update TodoWrite: ⏳ Generating feature_list.json (in_progress)
-
-Reorder features topologically and save:
-
-```bash
-#!/bin/bash
-set -euo pipefail
-
-# Write selected features to temp file
-TEMP_INPUT=$(mktemp)
-echo "$SELECTED_FEATURES_JSON" > "$TEMP_INPUT"
-
-# Reorder topologically
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/dependency_graph.py" reorder "$TEMP_INPUT" --output feature_list.json
-
-# Clean up
-rm -f "$TEMP_INPUT"
-
-# Create decomposition log
-cat > .claude/decomposition-log.json << EOF
-{
-  "version": "3.0.0",
-  "created_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-  "input_mode": "$INPUT_MODE",
-  "features_accepted": $(jq 'length' feature_list.json)
-}
-EOF
-
-echo ""
-echo "✅ Created feature_list.json with $(jq 'length' feature_list.json) features"
-echo "✅ Saved metadata to .claude/decomposition-log.json"
-echo ""
-```
-
-Update TodoWrite: ✅ Feature list generated
-
-Set `FEATURE_LIST_READY="true"` and continue to Phase 2.
-
-Update TodoWrite:
-
-```
-- ✅ Prerequisites validated
-- ✅ Task requirements collected
-- ✅ Features decomposed
-- ✅ Validation complete
-- ✅ Feature list generated
-- ⏳ Configuring setup options
-- ⏳ Creating configuration
-- ⏳ Launching autonomous agent
-```
-
-## Phase 2: Stage 1 Configuration - Essential Settings
-
-Check execution plan availability and SDK status:
-
-```bash
-HAS_PLAN="false"
-if [ -f ".claude/execution-plan.json" ]; then
-  HAS_PLAN="true"
-fi
-
-# Check if SDK already running
-if [ -f ".claude/sdk-bridge.pid" ]; then
-  PID=$(cat ".claude/sdk-bridge.pid")
-  if ps -p "$PID" > /dev/null 2>&1; then
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "⚠️  SDK Bridge Already Running"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-    echo "Process ID: $PID"
-    echo ""
-    echo "Options:"
-    echo "  • /sdk-bridge:status - Check current progress"
-    echo "  • /sdk-bridge:watch - Monitor live progress"
-    echo "  • /sdk-bridge:cancel - Stop current run and start fresh"
-    echo ""
-    exit 0
-  else
-    # Stale PID file, clean it up
-    echo "🧹 Cleaned up stale PID file, continuing..."
-    rm -f .claude/sdk-bridge.pid
-  fi
-fi
-
-echo "SDK_READY:HAS_PLAN=$HAS_PLAN"
-```
-
-**Use the AskUserQuestion tool** for Stage 1 (Essential Configuration):
-
-Build 3-4 questions dynamically based on HAS_PLAN:
-
-**Question 1 (always shown):**
-```
-question: "Which Claude model should the agent use?"
-header: "Model"
-multiSelect: false
-options:
-  - label: "Sonnet (Recommended)"
-    description: "Fast and capable - handles most development tasks efficiently. Best cost/performance ratio for autonomous work."
-  - label: "Opus"
-    description: "Most capable - use for complex refactoring, architecture changes, or when Sonnet struggles with previous attempts."
-```
-
-**Question 2 (always shown - NEW):**
-```
-question: "How many sessions should the agent have?"
-header: "Sessions"
-multiSelect: false
-options:
-  - label: "10 sessions"
-    description: "Quick experiments - suitable for small features or testing SDK Bridge for the first time."
-  - label: "20 sessions (Recommended)"
-    description: "Typical workload - handles most feature implementations with room for retries and learning."
-  - label: "30 sessions"
-    description: "Complex refactors - architectural changes, multi-file refactoring, or tightly coupled features."
-  - label: "50 sessions"
-    description: "Major projects - large feature sets, complete system overhauls, or when thoroughness matters most."
-```
-
-**Question 3 (only if HAS_PLAN=true):**
-```
-question: "Enable parallel execution for faster completion?"
-header: "Execution"
-multiSelect: false
-options:
-  - label: "Parallel (Recommended)"
-    description: "2-4x faster - launches multiple workers for independent features. Uses git-isolated branches with automatic merge coordination."
-  - label: "Sequential"
-    description: "One feature at a time - safer for tightly coupled features, first-time testing, or when features have hidden dependencies."
-```
-
-**Question 4 (always shown):**
-```
-question: "Which advanced features should be enabled?"
-header: "Features"
-multiSelect: true
-options:
-  - label: "Semantic Memory (Recommended)"
-    description: "Cross-project learning - suggests proven solutions from past successful implementations in other projects."
-  - label: "Adaptive Models (Recommended)"
-    description: "Smart routing - automatically escalates complex features to Opus based on complexity and past failure patterns."
-  - label: "Approval Workflow (Recommended)"
-    description: "Human-in-the-loop - pauses execution for high-risk operations like database migrations, API changes, architectural refactors."
-```
-
-## Phase 2.5: Gate - Advanced Settings Prompt
-
-After Stage 1 answers collected, validate and parse:
-
-```bash
-# Check if user cancelled (AskUserQuestion returns empty on cancel/timeout)
-if [ -z "$MODEL_ANSWER" ] || [ -z "$SESSIONS_ANSWER" ]; then
-  echo ""
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "⏹️  Setup Cancelled"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo ""
-  echo "Run /sdk-bridge:start again when ready to configure."
-  echo ""
-  exit 0
-fi
-
-# Parse Stage 1 answers
-MODEL="claude-sonnet-4-5-20250929"
-if [[ "$MODEL_ANSWER" == *"Opus"* ]]; then
-  MODEL="claude-opus-4-5-20251101"
-fi
-
-# Parse max sessions
-MAX_SESSIONS=20
-if [[ "$SESSIONS_ANSWER" == *"10"* ]]; then
-  MAX_SESSIONS=10
-elif [[ "$SESSIONS_ANSWER" == *"30"* ]]; then
-  MAX_SESSIONS=30
-elif [[ "$SESSIONS_ANSWER" == *"50"* ]]; then
-  MAX_SESSIONS=50
-fi
-
-# Parse execution mode
-ENABLE_PARALLEL="false"
-if [[ "$EXECUTION_ANSWER" == *"Parallel"* ]]; then
-  # Validate plan exists
-  if [ ! -f ".claude/execution-plan.json" ]; then
-    echo ""
-    echo "⚠️  Parallel mode requires execution plan. Falling back to sequential."
-    echo "To enable parallel: /sdk-bridge:plan then /sdk-bridge:start"
-    echo ""
-    ENABLE_PARALLEL="false"
-  else
-    ENABLE_PARALLEL="true"
-  fi
-fi
-
-# Parse advanced features
-ENABLE_MEMORY="false"
-ENABLE_ADAPTIVE="false"
-ENABLE_APPROVAL="false"
-
-if [[ "$FEATURES_ANSWER" == *"Semantic Memory"* ]]; then
-  ENABLE_MEMORY="true"
-fi
-if [[ "$FEATURES_ANSWER" == *"Adaptive Models"* ]]; then
-  ENABLE_ADAPTIVE="true"
-fi
-if [[ "$FEATURES_ANSWER" == *"Approval Workflow"* ]]; then
-  ENABLE_APPROVAL="true"
-fi
-
-# Show summary before gate
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "✅ Essential Configuration Complete"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "Advanced settings will use recommended defaults:"
-echo "  • Parallel workers: Auto-tuned based on CPU cores"
-echo "  • Log level: INFO (standard verbosity)"
-echo "  • Webhook notifications: Disabled"
-echo ""
-```
-
-**Use AskUserQuestion for gate:**
-```
-question: "Configure advanced settings (parallel workers, logging, webhooks)?"
-header: "Advanced"
-multiSelect: false
-options:
-  - label: "Use defaults (Recommended)"
-    description: "Start immediately with smart defaults - auto-tuned workers, INFO logging, no webhooks."
-  - label: "Customize settings"
-    description: "Fine-tune parallel workers, log verbosity, and webhook notifications before starting."
-```
-
-## Phase 2.75: Stage 2 Configuration - Advanced Settings (Optional)
-
-**Only execute if user selected "Customize settings"**
-
-```bash
-SHOW_ADVANCED="false"
-if [[ "$GATE_ANSWER" == *"Customize"* ]]; then
-  SHOW_ADVANCED="true"
-fi
-```
-
-**If SHOW_ADVANCED=true, use AskUserQuestion for Stage 2:**
-
-**Question 1:**
-```
-question: "How many parallel workers should run simultaneously?"
-header: "Workers"
-multiSelect: false
-options:
-  - label: "2 workers"
-    description: "Conservative - low memory usage, good for laptops or when running other heavy processes."
-  - label: "3 workers (Recommended)"
-    description: "Balanced - good speed without excessive resource usage. Works well on most machines."
-  - label: "5 workers"
-    description: "Fast - requires more memory and CPU. Best for desktop machines with 16GB+ RAM."
-  - label: "8 workers"
-    description: "Maximum speed - high resource usage. Only for powerful machines with 32GB+ RAM and 8+ cores."
-```
-
-**Question 2:**
-```
-question: "What log verbosity should be used?"
-header: "Logging"
-multiSelect: false
-options:
-  - label: "INFO (Recommended)"
-    description: "Standard logging - shows important events, progress updates, and errors. Good for normal use."
-  - label: "DEBUG"
-    description: "Verbose logging - shows detailed execution traces, API calls, and internal state. Use for troubleshooting."
-  - label: "WARNING"
-    description: "Minimal logging - only shows warnings and errors. Quieter output, harder to debug issues."
-```
-
-**Question 3:**
-```
-question: "Enable webhook notifications?"
-header: "Webhooks"
-multiSelect: false
-options:
-  - label: "Disabled (Recommended)"
-    description: "No external notifications - check progress with /sdk-bridge:status or /sdk-bridge:watch commands."
-  - label: "Slack webhook"
-    description: "Send completion notifications to Slack. You'll need to provide a webhook URL."
-  - label: "Discord webhook"
-    description: "Send completion notifications to Discord. You'll need to provide a webhook URL."
-  - label: "Custom webhook"
-    description: "Send notifications to a custom HTTPS endpoint. You'll need to provide a webhook URL."
-```
-
-**Parse Stage 2 answers:**
-```bash
-# Default values (if Stage 2 skipped or cancelled)
-MAX_WORKERS=3
-LOG_LEVEL="INFO"
-WEBHOOK_URL=""
-
-# If Stage 2 shown, parse answers (fall back to defaults if cancelled)
-if [ "$SHOW_ADVANCED" = "true" ]; then
-  # Check if user cancelled Stage 2 (fall back to defaults)
-  if [ -z "$WORKERS_ANSWER" ]; then
-    echo ""
-    echo "⚠️  Advanced configuration cancelled, using defaults..."
-    echo ""
-  else
-  # Parse workers
-  if [[ "$WORKERS_ANSWER" == *"2"* ]]; then
-    MAX_WORKERS=2
-  elif [[ "$WORKERS_ANSWER" == *"5"* ]]; then
-    MAX_WORKERS=5
-  elif [[ "$WORKERS_ANSWER" == *"8"* ]]; then
-    MAX_WORKERS=8
-  fi
-
-  # Parse log level
-  if [[ "$LOG_ANSWER" == *"DEBUG"* ]]; then
-    LOG_LEVEL="DEBUG"
-  elif [[ "$LOG_ANSWER" == *"WARNING"* ]]; then
-    LOG_LEVEL="WARNING"
-  fi
-
-  # Parse webhook
-  if [[ "$WEBHOOK_ANSWER" == *"Slack"* ]] || \
-     [[ "$WEBHOOK_ANSWER" == *"Discord"* ]] || \
-     [[ "$WEBHOOK_ANSWER" == *"Custom"* ]]; then
-    echo ""
-    echo "Enter your webhook URL (or press Enter to skip):"
-    read -r WEBHOOK_URL
-
-    # Validate HTTPS
-    if [[ -n "$WEBHOOK_URL" ]] && [[ ! "$WEBHOOK_URL" =~ ^https:// ]]; then
-      echo "⚠️  Invalid URL format (must start with https://), skipping webhook"
-      WEBHOOK_URL=""
-    elif [[ -n "$WEBHOOK_URL" ]]; then
-      echo "✅ Webhook configured"
-    fi
-  fi
-  fi  # Close the "else" block from cancellation check
-fi  # Close the SHOW_ADVANCED check
-```
-
-## Phase 2.9: Config File Existence Check
-
-Check if config already exists and handle appropriately:
-
-```bash
-if [ -f ".claude/sdk-bridge.local.md" ]; then
-  echo ""
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "⚠️  Configuration Already Exists"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo ""
-  echo "Found existing configuration at .claude/sdk-bridge.local.md"
-  echo ""
-  echo "What would you like to do?"
-  echo "  1. Overwrite with new configuration (creates backup)"
-  echo "  2. Keep existing and skip configuration"
-  echo "  3. Cancel setup"
-  echo ""
-  read -p "Your choice (1/2/3): " CONFIG_CHOICE
-
-  case "$CONFIG_CHOICE" in
-    1)
-      echo ""
-      echo "Creating backup..."
-      TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
-      cp .claude/sdk-bridge.local.md ".claude/sdk-bridge.local.md.${TIMESTAMP}.bak"
-      echo "✅ Backup saved: .claude/sdk-bridge.local.md.${TIMESTAMP}.bak"
-      echo ""
-      OVERWRITE_CONFIG="true"
-      ;;
-    2)
-      echo ""
-      echo "Using existing configuration. Proceeding to launch..."
-      echo ""
-      SKIP_CONFIG="true"
-      ;;
-    3|*)
-      echo ""
-      echo "Setup cancelled."
-      echo ""
-      exit 0
-      ;;
-  esac
-fi
-```
-
-## Phase 3: Create Configuration (Silent)
-
-**Only if SKIP_CONFIG != "true"**
-
-All values already parsed in Phase 2 and 2.75. Create config file:
-
-```bash
-if [ "$SKIP_CONFIG" != "true" ]; then
-  # Calculate derived values
-RESERVE_SESSIONS=2
-PROGRESS_STALL_THRESHOLD=3
-MAX_INNER_LOOPS=5
-AUTO_HANDOFF="false"
-ENABLE_V2="true"
-TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
-
-# Human-readable values for documentation
-EXECUTION_MODE="Sequential"
-if [ "$ENABLE_PARALLEL" = "true" ]; then
-  EXECUTION_MODE="Parallel ($MAX_WORKERS workers)"
-fi
-
-WEBHOOK_STATUS="Disabled"
-if [ -n "$WEBHOOK_URL" ]; then
-  WEBHOOK_STATUS="Enabled"
-fi
-
-# Create configuration file (silent)
-cat > .claude/sdk-bridge.local.md << EOF
+Create config file:
+```yaml
 ---
-# SDK Bridge Configuration
-enabled: true
-model: $MODEL
-max_sessions: $MAX_SESSIONS
-reserve_sessions: $RESERVE_SESSIONS
-progress_stall_threshold: $PROGRESS_STALL_THRESHOLD
-auto_handoff_after_plan: $AUTO_HANDOFF
-log_level: $LOG_LEVEL
-webhook_url: $WEBHOOK_URL
-
-# v2.0 Advanced Features
-enable_v2_features: $ENABLE_V2
-enable_semantic_memory: $ENABLE_MEMORY
-enable_adaptive_models: $ENABLE_ADAPTIVE
-enable_approval_nodes: $ENABLE_APPROVAL
-max_inner_loops: $MAX_INNER_LOOPS
-
-# v2.0 Phase 3: Parallel Execution
-enable_parallel_execution: $ENABLE_PARALLEL
-max_parallel_workers: $MAX_WORKERS
+max_iterations: [user's answer]
+editor_command: "code"  # or "cursor" based on detection
+branch_prefix: "sdk-bridge"
+execution_mode: [foreground|background]
 ---
 
 # SDK Bridge Configuration
 
-Created by /sdk-bridge:start on $TIMESTAMP
-
-## Essential Settings
-
-- **Model**: $MODEL
-- **Max Sessions**: $MAX_SESSIONS
-- **Execution Mode**: $EXECUTION_MODE
-
-## Advanced Features
-
-- **Semantic Memory**: $ENABLE_MEMORY
-- **Adaptive Models**: $ENABLE_ADAPTIVE
-- **Approval Workflow**: $ENABLE_APPROVAL
-
-## Advanced Settings
-
-- **Parallel Workers**: $MAX_WORKERS (only applies in parallel mode)
-- **Log Level**: $LOG_LEVEL
-- **Webhook URL**: $WEBHOOK_STATUS
-
-## Notes
-
-This configuration was created via the interactive setup UI. You can manually edit this file
-to fine-tune settings. See CLAUDE.md for detailed configuration documentation.
-
-To reconfigure, run: /sdk-bridge:start
-EOF
-
-# Validate file created
-  if [ ! -f ".claude/sdk-bridge.local.md" ] || [ ! -s ".claude/sdk-bridge.local.md" ]; then
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "❌ Failed to Create Configuration File"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-    echo "Could not write to .claude/sdk-bridge.local.md"
-    echo ""
-    echo "Troubleshooting:"
-    echo "  • Check directory permissions: ls -la .claude/"
-    echo "  • Verify disk space: df -h ."
-    echo "  • Try creating manually: touch .claude/sdk-bridge.local.md"
-    echo ""
-    exit 1
-  fi
-
-  echo "CONFIG_CREATED"
-fi
+Edit these settings as needed and run `/sdk-bridge:start` again.
 ```
 
-Update TodoWrite:
+**Checkpoint 7: Launch**
 
-```
-- ✅ Prerequisites validated
-- ✅ Setup options configured
-- ✅ Configuration created
-- ⏳ Launching autonomous agent
-```
+Show user what will happen:
+"Starting SDK Bridge with [max_iterations] iterations in [mode] mode..."
 
-## Phase 4: Launch Agent (Background Process)
-
-Read configuration and launch harness:
-
+If **foreground mode**:
 ```bash
-#!/bin/bash
-set -euo pipefail
-
-PYTHON="$HOME/.claude/skills/long-running-agent/.venv/bin/python"
-PROJECT_DIR="."
-LOG_FILE=".claude/sdk-bridge.log"
-PID_FILE=".claude/sdk-bridge.pid"
-
-# Read configuration
-FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' .claude/sdk-bridge.local.md)
-MODEL=$(echo "$FRONTMATTER" | grep '^model:' | sed 's/model: *//')
-MAX_SESSIONS=$(echo "$FRONTMATTER" | grep '^max_sessions:' | sed 's/max_sessions: *//' || echo "20")
-RESERVE_SESSIONS=$(echo "$FRONTMATTER" | grep '^reserve_sessions:' | sed 's/reserve_sessions: *//' || echo "2")
-MAX_INNER=$(echo "$FRONTMATTER" | grep '^max_inner_loops:' | sed 's/max_inner_loops: *//' || echo "5")
-LOG_LEVEL=$(echo "$FRONTMATTER" | grep '^log_level:' | sed 's/log_level: *//' || echo "INFO")
-ENABLE_MEMORY=$(echo "$FRONTMATTER" | grep '^enable_semantic_memory:' | sed 's/enable_semantic_memory: *//' || echo "true")
-ENABLE_PARALLEL=$(echo "$FRONTMATTER" | grep '^enable_parallel_execution:' | sed 's/enable_parallel_execution: *//' || echo "false")
-MAX_WORKERS=$(echo "$FRONTMATTER" | grep '^max_parallel_workers:' | sed 's/max_parallel_workers: *//' || echo "3")
-
-MAX_ITERATIONS=$((MAX_SESSIONS - RESERVE_SESSIONS))
-
-# Determine execution mode
-EXECUTION_MODE="sequential"
-HARNESS="$HOME/.claude/skills/long-running-agent/harness/hybrid_loop_agent.py"
-
-if [ "$ENABLE_PARALLEL" = "true" ] && [ -f ".claude/execution-plan.json" ]; then
-  EXECUTION_MODE="parallel"
-  HARNESS="$HOME/.claude/skills/long-running-agent/harness/parallel_coordinator.py"
-fi
-
-# Create handoff context (silent)
-cat > .claude/handoff-context.json << EOF
-{
-  "version": "3.0.0",
-  "handoff_time": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-  "mode": "$EXECUTION_MODE",
-  "model": "$MODEL",
-  "max_sessions": $MAX_SESSIONS,
-  "features": {
-    "semantic_memory": $ENABLE_MEMORY,
-    "adaptive_models": $(echo "$FRONTMATTER" | grep '^enable_adaptive_models:' | sed 's/enable_adaptive_models: *//'),
-    "parallel_execution": $ENABLE_PARALLEL
-  },
-  "session_count": 0,
-  "status": "running"
-}
-EOF
-
-# Build launch command
-if [ "$EXECUTION_MODE" = "parallel" ]; then
-  CMD="$PYTHON $HARNESS \
-    --project-dir $PROJECT_DIR \
-    --model $MODEL \
-    --max-workers $MAX_WORKERS \
-    --max-sessions $MAX_SESSIONS \
-    --execution-plan .claude/execution-plan.json \
-    --log-level $LOG_LEVEL"
-
-  if [ "$ENABLE_MEMORY" = "false" ]; then
-    CMD="$CMD --disable-semantic-memory"
-  fi
-else
-  CMD="$PYTHON $HARNESS \
-    --project-dir $PROJECT_DIR \
-    --model $MODEL \
-    --max-iterations $MAX_ITERATIONS \
-    --max-inner-loops $MAX_INNER \
-    --log-level $LOG_LEVEL"
-
-  if [ "$ENABLE_MEMORY" = "false" ]; then
-    CMD="$CMD --disable-semantic-memory"
-  fi
-fi
-
-# Launch in background (silent)
-nohup $CMD > "$LOG_FILE" 2>&1 &
-PID=$!
-echo $PID > "$PID_FILE"
-
-# Verify process started
-sleep 2
-if ! ps -p $PID > /dev/null 2>&1; then
-  echo "ERROR: Failed to launch. Check $LOG_FILE"
-  exit 1
-fi
-
-# Count features
-FEATURE_COUNT=$(jq 'length' feature_list.json 2>/dev/null || echo "0")
-
-# Estimate time
-if [ "$EXECUTION_MODE" = "parallel" ]; then
-  ESTIMATED_MIN=$((FEATURE_COUNT * 15 / MAX_WORKERS))
-else
-  ESTIMATED_MIN=$((FEATURE_COUNT * 15))
-fi
-
-# Output structured status for display
-cat << EOF
-LAUNCH_SUCCESS
-PID=$PID
-MODE=$EXECUTION_MODE
-WORKERS=$MAX_WORKERS
-MODEL=$MODEL
-FEATURES=$FEATURE_COUNT
-ESTIMATED_MIN=$ESTIMATED_MIN
-LOG=$LOG_FILE
-EOF
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/sdk-bridge.sh [max_iterations]
 ```
 
-## Phase 5: Final Status Display
+User sees live output. Loop continues until:
+- All stories complete (outputs `<promise>COMPLETE</promise>`)
+- Max iterations reached
+- User presses Ctrl+C
 
-Update TodoWrite to completion:
-
+If **background mode**:
+```bash
+mkdir -p .claude
+nohup bash ${CLAUDE_PLUGIN_ROOT}/scripts/sdk-bridge.sh [max_iterations] > .claude/sdk-bridge.log 2>&1 &
+echo $! > .claude/sdk-bridge.pid
 ```
-- ✅ Prerequisites validated
-- ✅ Setup options configured
-- ✅ Configuration created
-- ✅ Agent launched successfully
-```
 
-Display clean success message:
-
-```
-Parse the launch output and display:
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚀 SDK Bridge Running!
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Configuration:
-  Mode: [sequential/parallel]
-  [If parallel: Workers: 3, Speedup: ~3x]
-  Model: [model name]
-  Features: [count]
-
-Status:
-  PID: [pid]
-  Estimated time: ~[X] minutes
-
-Monitor Progress:
-  • Live updates: /sdk-bridge:watch
-  • Check status: /sdk-bridge:status
-  • View logs: tail -f .claude/sdk-bridge.log
-  • Cancel: /sdk-bridge:cancel
-
-I'll notify you when complete! ✨
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+Then tell user:
+"SDK Bridge running in background (PID: [pid])"
+"View logs: tail -f .claude/sdk-bridge.log"
+"Check status: ps -p [pid]"
 
 ## Error Handling
 
-If any phase fails:
+- If prd.json already exists, warn user: "Found existing prd.json. This will be archived when you run SDK Bridge."
+- If tasks/ directory doesn't exist, create it
+- If amp or jq not found and user declines install, exit gracefully with install instructions
+- If skill loading fails, show helpful error message
 
-1. **Setup fails**: Show "Installation failed. Check .claude/setup.log"
-2. **Prerequisites fail**: Show specific missing item (feature_list.json, SDK, etc.)
-3. **Launch fails**: Show "Failed to start. Check .claude/sdk-bridge.log"
+## Success Output
 
-Always maintain clean UI - technical errors go to log files, user sees actionable messages.
+When complete (foreground mode):
+"SDK Bridge completed [X] iterations"
+"Completed stories: [count]"
+"Check prd.json for status"
+"Review progress.txt for learnings"
+
+When launched (background mode):
+"SDK Bridge launched in background"
+"Monitor with: tail -f .claude/sdk-bridge.log"
+"Or check prd.json for completion status"
+
+## Important Notes
+
+- Use TodoWrite to track progress through checkpoints
+- Keep user informed at each step
+- Validate all file paths before operations
+- Use ${CLAUDE_PLUGIN_ROOT} for script paths
+- Handle both success and error cases gracefully

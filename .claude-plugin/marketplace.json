@@ -5,15 +5,15 @@
     "url": "https://github.com/flight505"
   },
   "metadata": {
-    "description": "End-to-end autonomous development: intelligent task decomposition, interactive setup, dependency validation, live progress",
-    "version": "3.0.0"
+    "description": "Interactive autonomous development assistant - generates PRDs and runs Amp agent loops. Based on Ralph pattern.",
+    "version": "4.0.0"
   },
   "plugins": [
     {
       "name": "sdk-bridge",
       "source": "./plugins/sdk-bridge",
-      "description": "End-to-end autonomous development assistant: intelligent task decomposition, interactive setup, dependency validation, live progress tracking",
-      "version": "3.0.0",
+      "description": "Interactive autonomous development assistant - generates PRDs, converts to execution format, and runs Amp agent loops until complete. Based on Ralph pattern.",
+      "version": "4.0.0",
       "author": {
         "name": "flight505",
         "url": "https://github.com/flight505"
@@ -21,37 +21,22 @@
       "repository": "https://github.com/flight505/sdk-bridge-marketplace",
       "license": "MIT",
       "keywords": [
-        "agent-sdk",
-        "automation",
-        "long-running",
-        "harness",
-        "handoff",
+        "amp",
         "autonomous",
-        "multi-session",
-        "task-decomposition",
-        "generative-ui"
+        "prd",
+        "agent-loop",
+        "long-running",
+        "interactive",
+        "ralph-pattern"
       ],
       "category": "workflows",
-      "strict": true,
+      "strict": false,
       "commands": [
-        "./commands/start.md",
-        "./commands/decompose.md",
-        "./commands/watch.md",
-        "./commands/status.md",
-        "./commands/resume.md",
-        "./commands/cancel.md",
-        "./commands/plan.md",
-        "./commands/enable-parallel.md",
-        "./commands/approve.md",
-        "./commands/observe.md"
-      ],
-      "agents": [
-        "./agents/handoff-validator.md",
-        "./agents/completion-reviewer.md"
+        "./commands/start.md"
       ],
       "skills": [
-        "./skills/sdk-bridge-patterns",
-        "./skills/decompose-task"
+        "./skills/prd-generator",
+        "./skills/prd-converter"
       ]
     }
   ]

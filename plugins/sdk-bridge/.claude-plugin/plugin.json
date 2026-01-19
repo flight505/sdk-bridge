@@ -1,7 +1,7 @@
 {
   "name": "sdk-bridge",
-  "version": "3.0.0",
-  "description": "End-to-end autonomous development assistant: intelligent task decomposition, interactive setup, dependency validation, live progress tracking.",
+  "version": "4.0.0",
+  "description": "Interactive autonomous development assistant - generates PRDs, converts to execution format, and runs Amp agent loops until complete. Based on Ralph pattern.",
   "author": {
     "name": "Jesper Vang",
     "url": "https://github.com/flight505"
@@ -9,25 +9,12 @@
   "license": "MIT",
   "repository": "https://github.com/flight505/sdk-bridge-marketplace",
   "homepage": "https://github.com/flight505/sdk-bridge-marketplace",
-  "keywords": ["agent-sdk", "automation", "long-running", "harness", "handoff", "generative-ui", "proactive", "task-decomposition"],
+  "keywords": ["amp", "autonomous", "prd", "agent-loop", "long-running", "interactive"],
   "commands": [
-    "./commands/start.md",
-    "./commands/decompose.md",
-    "./commands/watch.md",
-    "./commands/status.md",
-    "./commands/resume.md",
-    "./commands/cancel.md",
-    "./commands/plan.md",
-    "./commands/enable-parallel.md",
-    "./commands/approve.md",
-    "./commands/observe.md"
-  ],
-  "agents": [
-    "./agents/handoff-validator.md",
-    "./agents/completion-reviewer.md"
+    "./commands/start.md"
   ],
   "skills": [
-    "./skills/sdk-bridge-patterns",
-    "./skills/decompose-task"
+    "./skills/prd-generator",
+    "./skills/prd-converter"
   ]
 }
