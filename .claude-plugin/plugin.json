@@ -9,7 +9,7 @@
   "license": "MIT",
   "repository": "https://github.com/flight505/flight505-marketplace",
   "homepage": "https://github.com/flight505/flight505-marketplace/tree/main/sdk-bridge",
-  "keywords": ["claude-cli", "autonomous", "prd", "agent-loop", "long-running", "interactive", "ralph-pattern"],
+  "keywords": ["claude-cli", "autonomous", "prd", "agent-loop", "long-running", "interactive"],
   "commands": [
     "./commands/start.md"
   ],

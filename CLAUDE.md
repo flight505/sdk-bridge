@@ -8,13 +8,13 @@ Developer instructions for working with the SDK Bridge plugin for Claude Code CL
 
 ## Overview
 
-SDK Bridge is an **interactive autonomous development assistant** built on the Ralph pattern. It provides a single command (`/sdk-bridge:start`) that guides users through:
+SDK Bridge is an **interactive autonomous development assistant**. It provides a single command (`/sdk-bridge:start`) that guides users through:
 1. Describing their feature/project
 2. Generating a detailed PRD
 3. Converting to execution format
 4. Running a fresh Claude agent loop until complete
 
-**Key Philosophy:** Radical simplicity. One command, interactive wizard, proven Ralph pattern.
+**Key Philosophy:** Radical simplicity. One command, interactive wizard, fresh Claude instances each iteration.
 
 ---
 
@@ -162,7 +162,7 @@ Each Claude agent iteration:
 ### Adding New Features
 
 **Don't.** The point of v4.0 is radical simplicity. If you feel the urge to add features, ask:
-1. Does Ralph have this? (If no, probably don't need it)
+1. Is this feature essential? (If no, probably don't need it)
 2. Can users work around it? (If yes, document workaround instead)
 3. Does it add >10% value for >50% of users? (If no, skip it)
 
@@ -320,7 +320,7 @@ head -5 plugins/sdk-bridge/skills/*/SKILL.md
 
 ### v4.0.0 (2026-01-19) - Complete Rewrite
 
-**BREAKING CHANGE:** Complete architectural rewrite based on Ralph pattern.
+**BREAKING CHANGE:** Complete architectural rewrite with focus on simplicity.
 
 **Removed:**
 - All 10 commands (replaced with single `/sdk-bridge:start`)
@@ -339,7 +339,7 @@ head -5 plugins/sdk-bridge/skills/*/SKILL.md
 - Automatic archiving of previous runs
 
 **Why the rewrite?**
-The v3.x architecture was over-engineered. Ralph's proven pattern is simpler:
+The v3.x architecture was over-engineered. This simpler approach is better:
 - Fresh Claude context each iteration prevents pollution (no session continuation)
 - Bash loop easier to understand and debug
 - Interactive onboarding more accessible
@@ -361,7 +361,6 @@ Claude Agent SDK with programmatic control (superseded)
 
 - [Claude Code CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
 - [Claude Code Headless Mode](https://code.claude.com/docs/en/headless.md)
-- [Ralph Pattern](https://ghuntley.com/ralph/)
 - [Claude Code Plugin Guide](https://github.com/anthropics/claude-code/blob/main/docs/plugins.md)
 - [Marketplace Format](https://github.com/anthropics/claude-code/blob/main/docs/plugin-marketplace.md)
 

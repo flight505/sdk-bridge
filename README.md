@@ -283,7 +283,7 @@ sdk-bridge/
 
 ## What Changed in v4.0.0?
 
-SDK Bridge v4 is a **complete rewrite** based on the proven Ralph pattern:
+SDK Bridge v4 is a **complete rewrite** with a focus on simplicity:
 
 **Before (v3.x):**
 - 10 commands, 2 agents, complex Python harness
@@ -298,7 +298,7 @@ SDK Bridge v4 is a **complete rewrite** based on the proven Ralph pattern:
 - Interactive PRD generation
 
 **Why the change?**
-The previous architecture was over-engineered. Ralph's simplicity works better:
+The previous architecture was over-engineered. This simpler approach works better:
 - Fresh context each iteration prevents context pollution
 - Bash loop is easier to understand and debug
 - Interactive onboarding makes it accessible
