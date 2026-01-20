@@ -35,23 +35,33 @@ Each iteration is a **fresh Claude instance** with clean context. Memory persist
 - [Claude Code CLI](https://code.claude.com) (comes with Claude Code installation)
 - `jq` JSON parser (`brew install jq` on macOS)
 - Git repository for your project
-- Claude Code OAuth token (long-lived authentication)
+- Authentication (OAuth token or API key)
 
 SDK Bridge will check for these dependencies and offer to install them automatically.
 
-**Authentication Setup:**
+**Authentication (choose one):**
+
+**Option 1: OAuth Token (Recommended for Max subscribers)**
 ```bash
 # Generate OAuth token (valid for 1 year)
-claude login --oauth
+claude setup-token
 
-# Add to your shell profile (~/.zshrc or ~/.zsh_secrets)
-export CLAUDE_CODE_OAUTH_TOKEN='your-token-here'
+# Add to ~/.zshrc or ~/.zsh_secrets
+export CLAUDE_CODE_OAUTH_TOKEN='your-token'
 
-# Reload your shell
+# Reload shell
 source ~/.zshrc
 ```
+*Benefits: Higher rate limits, long-lived, better for autonomous workflows*
 
-The plugin automatically prioritizes OAuth authentication over API keys to ensure consistent, long-lived access.
+**Option 2: API Key (Alternative)**
+```bash
+# Get from: https://console.anthropic.com/settings/keys
+export ANTHROPIC_API_KEY='your-key'
+```
+*Works for all API users, standard rate limits*
+
+The plugin automatically uses OAuth if available, falls back to API key otherwise.
 
 ---
 

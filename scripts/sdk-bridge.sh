@@ -4,21 +4,34 @@
 
 set -e
 
-# Ensure OAuth token is used (unset API keys that may interfere)
-# Claude CLI prioritizes ANTHROPIC_API_KEY over CLAUDE_CODE_OAUTH_TOKEN
-unset ANTHROPIC_API_KEY ANTHROPIC_ADMIN_KEY
+# Check authentication (OAuth preferred, API key as fallback)
+if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+  # OAuth authentication (primary - Max subscribers)
+  unset ANTHROPIC_API_KEY ANTHROPIC_ADMIN_KEY
+  echo "✓ Using Claude Code OAuth authentication"
 
-# Verify OAuth token is available
-if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-  echo "Error: CLAUDE_CODE_OAUTH_TOKEN not set"
+elif [ -n "$ANTHROPIC_API_KEY" ]; then
+  # API key fallback
+  echo "✓ Using Anthropic API Key authentication"
+  echo "💡 Tip: Max subscribers can use 'claude setup-token' for better rate limits"
+
+else
+  # No authentication found
+  echo "Error: No authentication configured"
   echo ""
-  echo "SDK Bridge requires Claude Code CLI authentication via OAuth token."
+  echo "SDK Bridge requires authentication:"
   echo ""
-  echo "To set up:"
-  echo "  1. Run: claude login --oauth"
+  echo "Recommended: OAuth Token (Claude Max subscribers)"
+  echo "  1. Run: claude setup-token"
+  echo "  2. Copy the token and add to ~/.zshrc or ~/.zsh_secrets:"
+  echo "     export CLAUDE_CODE_OAUTH_TOKEN='your-token'"
+  echo "  3. Reload: source ~/.zshrc"
+  echo ""
+  echo "Alternative: API Key"
+  echo "  1. Get from: https://console.anthropic.com/settings/keys"
   echo "  2. Add to ~/.zshrc or ~/.zsh_secrets:"
-  echo "     export CLAUDE_CODE_OAUTH_TOKEN='your-token-here'"
-  echo "  3. Reload your shell: source ~/.zshrc"
+  echo "     export ANTHROPIC_API_KEY='your-key'"
+  echo "  3. Reload: source ~/.zshrc"
   echo ""
   exit 1
 fi

@@ -20,24 +20,39 @@ SDK Bridge is an **interactive autonomous development assistant**. It provides a
 
 ## Authentication
 
-SDK Bridge requires Claude Code CLI OAuth authentication. The `sdk-bridge.sh` script automatically:
+SDK Bridge supports two authentication methods with intelligent fallback:
 
-1. **Unsets API keys** - Removes `ANTHROPIC_API_KEY` and `ANTHROPIC_ADMIN_KEY` from the environment
-2. **Verifies OAuth token** - Checks that `CLAUDE_CODE_OAUTH_TOKEN` is set
-3. **Fails gracefully** - Provides setup instructions if token is missing
+**1. OAuth Token (Recommended for Max subscribers)**
+- Long-lived (1 year validity)
+- Higher rate limits
+- Better for autonomous workflows
 
-This ensures consistent authentication across all iterations, prioritizing the long-lived OAuth token over potentially rate-limited API keys.
+**2. API Key (Fallback)**
+- Works for all API users
+- Standard rate limits
+- May require monthly top-ups
 
-**Setup:**
+The `sdk-bridge.sh` script automatically:
+- Prioritizes `CLAUDE_CODE_OAUTH_TOKEN` if available (and unsets API keys)
+- Falls back to `ANTHROPIC_API_KEY` if OAuth not configured
+- Provides clear setup instructions if neither exists
+
+**OAuth Setup (Max subscribers):**
 ```bash
-# Get OAuth token (valid for 1 year)
-claude login --oauth
+# Generate OAuth token (valid for 1 year)
+claude setup-token
 
-# Add to ~/.zshrc or ~/.zsh_secrets
-export CLAUDE_CODE_OAUTH_TOKEN='your-token-here'
+# Copy the token and add to ~/.zshrc or ~/.zsh_secrets
+export CLAUDE_CODE_OAUTH_TOKEN='your-token'
 
 # Reload shell
 source ~/.zshrc
+```
+
+**API Key Setup (Alternative):**
+```bash
+# Get API key from: https://console.anthropic.com/settings/keys
+export ANTHROPIC_API_KEY='your-key'
 ```
 
 ---
