@@ -23,15 +23,11 @@ else
   echo ""
   echo "Recommended: OAuth Token (Claude Max subscribers)"
   echo "  1. Run: claude setup-token"
-  echo "  2. Copy the token and add to ~/.zshrc or ~/.zsh_secrets:"
-  echo "     export CLAUDE_CODE_OAUTH_TOKEN='your-token'"
-  echo "  3. Reload: source ~/.zshrc"
+  echo "  2. export CLAUDE_CODE_OAUTH_TOKEN='your-token'"
   echo ""
   echo "Alternative: API Key"
   echo "  1. Get from: https://console.anthropic.com/settings/keys"
-  echo "  2. Add to ~/.zshrc or ~/.zsh_secrets:"
-  echo "     export ANTHROPIC_API_KEY='your-key'"
-  echo "  3. Reload: source ~/.zshrc"
+  echo "  2. export ANTHROPIC_API_KEY='your-key'"
   echo ""
   exit 1
 fi

@@ -310,14 +310,8 @@ sdk-bridge/
 
 SDK Bridge v4 is a **complete rewrite** with a focus on simplicity:
 
-**Before (v3.x):**
-- 10 commands, 2 agents, complex Python harness
-- Claude Agent SDK with programmatic control
-- Background-only execution
-- Manual feature_list.json creation
-
 **After (v4.0):**
-- 1 command, 0 agents, simple bash loop
+- 1 command, 0 agents, simple bash loop , No more harness. 
 - Claude Code CLI for each iteration
 - Foreground or background execution
 - Interactive PRD generation
