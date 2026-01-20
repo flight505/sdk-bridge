@@ -1,15 +1,15 @@
 {
   "name": "sdk-bridge",
   "version": "4.0.0",
-  "description": "Interactive autonomous development assistant - generates PRDs, converts to execution format, and runs Amp agent loops until complete. Based on Ralph pattern.",
+  "description": "Interactive autonomous development assistant - generates PRDs, converts to execution format, and runs fresh Claude agent loops until complete.",
   "author": {
     "name": "Jesper Vang",
     "url": "https://github.com/flight505"
   },
   "license": "MIT",
-  "repository": "https://github.com/flight505/sdk-bridge-marketplace",
-  "homepage": "https://github.com/flight505/sdk-bridge-marketplace",
-  "keywords": ["amp", "autonomous", "prd", "agent-loop", "long-running", "interactive"],
+  "repository": "https://github.com/flight505/flight505-marketplace",
+  "homepage": "https://github.com/flight505/flight505-marketplace/tree/main/sdk-bridge",
+  "keywords": ["claude-cli", "autonomous", "prd", "agent-loop", "long-running", "interactive", "ralph-pattern"],
   "commands": [
     "./commands/start.md"
   ],

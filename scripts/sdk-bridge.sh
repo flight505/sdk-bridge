@@ -6,10 +6,12 @@ set -e
 
 MAX_ITERATIONS=${1:-10}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PRD_FILE="$SCRIPT_DIR/prd.json"
-PROGRESS_FILE="$SCRIPT_DIR/progress.txt"
-ARCHIVE_DIR="$SCRIPT_DIR/archive"
-LAST_BRANCH_FILE="$SCRIPT_DIR/.last-branch"
+# Work in the user's project directory (current working directory)
+PROJECT_DIR="$(pwd)"
+PRD_FILE="$PROJECT_DIR/prd.json"
+PROGRESS_FILE="$PROJECT_DIR/progress.txt"
+ARCHIVE_DIR="$PROJECT_DIR/archive"
+LAST_BRANCH_FILE="$PROJECT_DIR/.last-branch"
 
 # Archive previous run if branch changed
 if [ -f "$PRD_FILE" ] && [ -f "$LAST_BRANCH_FILE" ]; then
@@ -59,17 +61,41 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   echo "  SDK Bridge Iteration $i of $MAX_ITERATIONS"
   echo "═══════════════════════════════════════════════════════"
 
-  # Run amp with the sdk-bridge prompt
-  OUTPUT=$(cat "$SCRIPT_DIR/prompt.md" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
-  
+  # Run fresh Claude agent with the sdk-bridge prompt
+  # Each iteration has clean context (no -c flag) to prevent context rot
+  OUTPUT=$(claude -p "$(cat "$SCRIPT_DIR/prompt.md")" \
+    --output-format json \
+    --allowedTools "Bash,Read,Edit,Write,Glob,Grep" \
+    --no-session-persistence \
+    --model sonnet \
+    2>&1) || true
+
+  # Extract result from JSON output
+  RESULT=$(echo "$OUTPUT" | jq -r '.result // empty' 2>/dev/null || echo "$OUTPUT")
+
+  # Display result
+  echo "$RESULT"
+
+  # Append to progress file
+  echo "" >> "$PROGRESS_FILE"
+  echo "=== Iteration $i $(date) ===" >> "$PROGRESS_FILE"
+  echo "$RESULT" >> "$PROGRESS_FILE"
+
   # Check for completion signal
-  if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
+  if echo "$RESULT" | grep -q "<promise>COMPLETE</promise>"; then
     echo ""
-    echo "SDK Bridge completed all tasks!"
+    echo "✓ SDK Bridge completed all tasks!"
     echo "Completed at iteration $i of $MAX_ITERATIONS"
     exit 0
   fi
-  
+
+  # Check for errors
+  if echo "$OUTPUT" | jq -e '.is_error' > /dev/null 2>&1; then
+    ERROR_MSG=$(echo "$OUTPUT" | jq -r '.result // "Unknown error"')
+    echo "⚠ Warning: Iteration $i encountered an error: $ERROR_MSG"
+    echo "Continuing to next iteration..."
+  fi
+
   echo "Iteration $i complete. Continuing..."
   sleep 2
 done

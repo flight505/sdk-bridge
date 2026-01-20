@@ -7,9 +7,9 @@ set -e
 
 MISSING=()
 
-# Check for amp CLI
-if ! command -v amp &> /dev/null; then
-  MISSING+=("amp")
+# Check for claude CLI (Claude Code)
+if ! command -v claude &> /dev/null; then
+  MISSING+=("claude")
 fi
 
 # Check for jq (JSON parser)

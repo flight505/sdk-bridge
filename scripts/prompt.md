@@ -4,8 +4,8 @@ You are an autonomous coding agent working on a software project.
 
 ## Your Task
 
-1. Read the PRD at `prd.json` (in the same directory as this file)
-2. Read the progress log at `progress.txt` (check Codebase Patterns section first)
+1. Read the PRD at `prd.json` (in the project root directory)
+2. Read the progress log at `progress.txt` (in the project root, check Codebase Patterns section first)
 3. Check you're on the correct branch from PRD `branchName`. If not, check it out or create from main.
 4. Pick the **highest priority** user story where `passes: false`
 5. Implement that single user story
@@ -20,7 +20,6 @@ You are an autonomous coding agent working on a software project.
 APPEND to progress.txt (never replace, always append):
 ```
 ## [Date/Time] - [Story ID]
-Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
 - What was implemented
 - Files changed
 - **Learnings for future iterations:**
@@ -30,9 +29,7 @@ Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
 ---
 ```
 
-Include the thread URL so future iterations can use the `read_thread` tool to reference previous work if needed.
-
-The learnings section is critical - it helps future iterations avoid repeating mistakes and understand the codebase better.
+The learnings section is critical - it helps future iterations avoid repeating mistakes and understand the codebase better. Each iteration is a fresh Claude instance, so documenting learnings in progress.txt ensures knowledge carries forward.
 
 ## Consolidate Patterns
 

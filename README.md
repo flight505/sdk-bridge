@@ -1,8 +1,12 @@
 # SDK Bridge
 
+![SDK Bridge Hero](./assets/sdk-bridge-hero.jpg)
+
 **Version 4.0.0** - Complete Rewrite
 
-Interactive autonomous development assistant that generates PRDs, converts them to execution format, and runs [Amp](https://ampcode.com) agent loops until all work is complete.
+> **Why "SDK Bridge"?** It bridges the gap between your high-level requirements and autonomous AI execution—transforming human intent into working code through the Claude Agent SDK.
+
+Interactive autonomous development assistant that generates PRDs, converts them to execution format, and runs fresh Claude agent loops until all work is complete.
 
 Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
 
@@ -17,9 +21,9 @@ SDK Bridge guides you through an interactive workflow:
 3. **Review & edit** - Opens PRD in your editor for refinement
 4. **Convert to JSON** - Transforms PRD into executable task list
 5. **Configure & run** - Sets max iterations and execution mode
-6. **Autonomous execution** - Amp runs in a loop, implementing one story at a time until complete
+6. **Autonomous execution** - Fresh Claude agents run in a loop, implementing one story at a time until complete
 
-Each iteration is a **fresh Amp instance** with clean context. Memory persists via:
+Each iteration is a **fresh Claude instance** with clean context. Memory persists via:
 - Git history (commits from previous iterations)
 - `progress.txt` (learnings and discovered patterns)
 - `prd.json` (which stories are done)
@@ -28,11 +32,11 @@ Each iteration is a **fresh Amp instance** with clean context. Memory persists v
 
 ## Prerequisites
 
-- [Amp CLI](https://ampcode.com) (`npm install -g @anthropic-ai/amp-cli`)
+- [Claude Code CLI](https://code.claude.com) (comes with Claude Code installation)
 - `jq` JSON parser (`brew install jq` on macOS)
 - Git repository for your project
 
-SDK Bridge will check for these and offer to install them automatically.
+SDK Bridge will check for these dependencies and offer to install them automatically.
 
 ---
 
@@ -69,13 +73,13 @@ That's it! SDK Bridge will:
 
 ### The Loop
 
-SDK Bridge runs Amp repeatedly until all work is done:
+SDK Bridge runs fresh Claude agents repeatedly until all work is done:
 
 ```
 for iteration in 1..max_iterations:
   1. Read prd.json to find next story where "passes": false
-  2. Run fresh Amp instance with clean context
-  3. Amp implements ONE story:
+  2. Spawn fresh Claude instance with clean context
+  3. Claude implements ONE story:
      - Check out feature branch
      - Read progress.txt for patterns/learnings
      - Implement the single user story
@@ -99,7 +103,7 @@ for iteration in 1..max_iterations:
 
 ### Story Size
 
-Each PRD story must be small enough to complete in **one Amp context window**.
+Each PRD story must be small enough to complete in **one Claude context window**.
 
 **Right-sized stories:**
 - Add a database column and migration
@@ -134,7 +138,7 @@ execution_mode: "foreground" # or "background"
 ## Foreground vs Background
 
 **Foreground (default):**
-- See live output as Amp works
+- See live output as Claude works
 - Terminal stays occupied
 - Easy to stop with Ctrl+C
 - Recommended for learning how it works
@@ -164,7 +168,7 @@ SDK Bridge only commits when checks pass. Broken code compounds across iteration
 
 ### 3. AGENTS.md Updates
 
-SDK Bridge updates `AGENTS.md` files with discovered patterns. These are automatically read by Amp, so future iterations benefit from:
+SDK Bridge updates `AGENTS.md` files with discovered patterns. These are automatically read by Claude, so future iterations benefit from:
 - Patterns discovered ("this codebase uses X for Y")
 - Gotchas ("don't forget to update Z when changing W")
 - Useful context ("the settings panel is in component X")
@@ -175,7 +179,7 @@ The `## Codebase Patterns` section at the top of `progress.txt` consolidates the
 
 ### 5. Browser Verification
 
-For UI changes, PRDs should include "Verify in browser using dev-browser skill" in acceptance criteria. SDK Bridge will use Amp's browser automation to confirm visual changes work.
+For UI changes, PRDs should include "Verify in browser using dev-browser skill" in acceptance criteria. SDK Bridge will use Claude's browser automation to confirm visual changes work.
 
 ---
 
@@ -230,7 +234,7 @@ SDK Bridge: Starting SDK Bridge - Max iterations: 15
   SDK Bridge Iteration 1 of 15
 ═══════════════════════════════════════════════════════
 
-[Amp implements US-001: Add priority field to database]
+[Claude implements US-001: Add priority field to database]
 [Runs typecheck, commits]
 [Updates prd.json, appends to progress.txt]
 
@@ -240,7 +244,7 @@ Iteration 1 complete. Continuing...
   SDK Bridge Iteration 2 of 15
 ═══════════════════════════════════════════════════════
 
-[Amp implements US-002: Display priority indicator]
+[Claude implements US-002: Display priority indicator]
 [Verifies in browser, commits]
 
 ... continues until all 4 stories complete ...
@@ -270,7 +274,7 @@ sdk-bridge/
         │       └── SKILL.md
         └── scripts/
             ├── sdk-bridge.sh     # Main loop (bash)
-            ├── prompt.md         # Instructions for each Amp iteration
+            ├── prompt.md         # Instructions for each Claude iteration
             ├── check-deps.sh     # Dependency checker
             └── prd.json.example  # Reference format
 ```
@@ -289,7 +293,7 @@ SDK Bridge v4 is a **complete rewrite** based on the proven Ralph pattern:
 
 **After (v4.0):**
 - 1 command, 0 agents, simple bash loop
-- Amp CLI for each iteration
+- Claude Code CLI for each iteration
 - Foreground or background execution
 - Interactive PRD generation
 
@@ -298,13 +302,13 @@ The previous architecture was over-engineered. Ralph's simplicity works better:
 - Fresh context each iteration prevents context pollution
 - Bash loop is easier to understand and debug
 - Interactive onboarding makes it accessible
-- Amp's auto-handoff handles large features naturally
+- Claude Code CLI's auto-handoff handles large features naturally
 
 ---
 
 ## References
 
-- [Amp Documentation](https://ampcode.com/manual)
+- [Claude Code CLI Documentation](https://code.claude.com/docs/en/cli-reference.md)
 - [Geoffrey Huntley's Ralph article](https://ghuntley.com/ralph/)
 - [Claude Code Plugins](https://github.com/anthropics/claude-code)
 

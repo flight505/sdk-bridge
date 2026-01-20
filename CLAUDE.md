@@ -12,7 +12,7 @@ SDK Bridge is an **interactive autonomous development assistant** built on the R
 1. Describing their feature/project
 2. Generating a detailed PRD
 3. Converting to execution format
-4. Running an Amp agent loop until complete
+4. Running a fresh Claude agent loop until complete
 
 **Key Philosophy:** Radical simplicity. One command, interactive wizard, proven Ralph pattern.
 
@@ -48,7 +48,7 @@ sdk-bridge-marketplace/
 
 **Commands (`commands/start.md`):**
 - Single entry point for all functionality
-- Orchestrates 6-checkpoint interactive workflow
+- Orchestrates 7-checkpoint interactive workflow
 - Uses AskUserQuestion for user input
 - Invokes skills via Task tool
 - Launches bash scripts via Bash tool
@@ -58,9 +58,9 @@ sdk-bridge-marketplace/
 - `prd-converter`: Transforms markdown PRD to prd.json format
 
 **Scripts (`scripts/*.sh`, `scripts/*.md`):**
-- `sdk-bridge.sh`: Main loop - runs Amp repeatedly until complete
-- `prompt.md`: Instructions given to each Amp instance
-- `check-deps.sh`: Validates amp and jq are installed
+- `sdk-bridge.sh`: Main loop - runs fresh Claude instances repeatedly until complete
+- `prompt.md`: Instructions given to each Claude agent instance
+- `check-deps.sh`: Validates claude CLI and jq are installed
 - `prd.json.example`: Reference format for users
 
 ### State Files (in user's project)
@@ -83,10 +83,10 @@ project/
 
 ## How It Works
 
-### The 6-Checkpoint Flow
+### The 7-Checkpoint Flow
 
 **Checkpoint 1: Dependency Check**
-- Run `check-deps.sh` to verify amp and jq installed
+- Run `check-deps.sh` to verify claude CLI and jq installed
 - If missing, ask user permission to auto-install
 - Exit gracefully if user declines
 
@@ -111,35 +111,39 @@ project/
 - Converts markdown PRD → `prd.json`
 - Validates structure (IDs, priorities, criteria)
 
-**Checkpoint 6: Configure & Launch**
+**Checkpoint 6: Execution Settings**
 - AskUserQuestion for max_iterations and execution mode
 - Create `.claude/sdk-bridge.local.md` with settings
+
+**Checkpoint 7: Launch**
 - Launch `sdk-bridge.sh` (foreground or background)
+- Monitor progress and display status
 
 ### The Execution Loop (sdk-bridge.sh)
 
-Bash script that spawns fresh Amp instances:
+Bash script that spawns fresh Claude agent instances:
 
 ```bash
 for i in 1 to MAX_ITERATIONS:
-  1. Run: cat prompt.md | amp --dangerously-allow-all
-  2. Amp reads prd.json, picks next "passes": false story
-  3. Amp implements that story, runs checks, commits if green
-  4. Amp updates prd.json, appends to progress.txt
+  1. Run: claude -p "$(cat prompt.md)" --output-format json --allowedTools "Bash,Read,Edit,Write,Glob,Grep"
+  2. Claude reads prd.json, picks next "passes": false story
+  3. Claude implements that story, runs checks, commits if green
+  4. Claude updates prd.json, appends to progress.txt
   5. Check for completion: <promise>COMPLETE</promise>
   6. If complete, exit; otherwise loop
 ```
 
 **Key Features:**
+- Each iteration uses fresh Claude context (no session continuation) to prevent context rot
 - Archives previous runs when branch changes
 - Tracks current branch in `.last-branch`
 - Initializes progress.txt if missing
 - Foreground: user sees live output
 - Background: uses nohup, logs to `.claude/sdk-bridge.log`
 
-### What Amp Does (prompt.md)
+### What Each Claude Instance Does (prompt.md)
 
-Each Amp iteration:
+Each Claude agent iteration:
 1. Checks out correct branch (from prd.json `branchName`)
 2. Reads `progress.txt` (especially "Codebase Patterns" section)
 3. Picks highest priority story where `passes: false`
@@ -165,7 +169,7 @@ Each Amp iteration:
 ### Modifying Existing Components
 
 **Commands (`start.md`):**
-- Follow 6-checkpoint structure
+- Follow 7-checkpoint structure
 - Use AskUserQuestion at decision points
 - Keep error messages helpful and actionable
 - Test both foreground and background modes
@@ -278,9 +282,9 @@ cat ~/.claude/plugins/cache/sdk-bridge-marketplace/sdk-bridge/*/.claude-plugin/p
 bash plugins/sdk-bridge/scripts/check-deps.sh
 echo $?  # Should be 0 if all deps present
 
-# Check amp
-which amp
-amp --version
+# Check claude CLI
+which claude
+claude --version
 
 # Check jq
 which jq
@@ -296,8 +300,8 @@ ls -la plugins/sdk-bridge/scripts/*.sh
 # Test script directly
 bash plugins/sdk-bridge/scripts/sdk-bridge.sh 1
 
-# Check Amp works
-echo "Hello from Amp" | amp
+# Check Claude CLI works
+claude -p "What is 2+2?" --output-format json --no-session-persistence
 ```
 
 ### Skills Not Loading
@@ -336,11 +340,11 @@ head -5 plugins/sdk-bridge/skills/*/SKILL.md
 
 **Why the rewrite?**
 The v3.x architecture was over-engineered. Ralph's proven pattern is simpler:
-- Fresh Amp context each iteration prevents pollution
+- Fresh Claude context each iteration prevents pollution (no session continuation)
 - Bash loop easier to understand and debug
 - Interactive onboarding more accessible
-- Amp's auto-handoff handles large features naturally
-- No Python dependency, just bash + amp + jq
+- Claude Code CLI's auto-handoff handles large features naturally
+- No Python dependency, just bash + claude CLI + jq
 
 ### v3.0.0 (2026-01-18) - End-to-End Transformation
 Task decomposition, intelligent dependency validation (superseded)
@@ -355,7 +359,8 @@ Claude Agent SDK with programmatic control (superseded)
 
 ## References
 
-- [Amp Documentation](https://ampcode.com/manual)
+- [Claude Code CLI Reference](https://code.claude.com/docs/en/cli-reference.md)
+- [Claude Code Headless Mode](https://code.claude.com/docs/en/headless.md)
 - [Ralph Pattern](https://ghuntley.com/ralph/)
 - [Claude Code Plugin Guide](https://github.com/anthropics/claude-code/blob/main/docs/plugins.md)
 - [Marketplace Format](https://github.com/anthropics/claude-code/blob/main/docs/plugin-marketplace.md)

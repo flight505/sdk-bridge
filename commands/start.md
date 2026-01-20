@@ -29,7 +29,7 @@ If dependencies are missing, use AskUserQuestion to ask:
 - Options: "Yes - install for me" / "No - I'll install manually"
 
 If user approves automatic install:
-- For amp: `npm install -g @anthropic-ai/amp-cli`
+- For claude CLI: Explain that the `claude` command comes with Claude Code and should already be available. If not found, the user may need to reinstall Claude Code or add it to their PATH.
 - For jq on macOS: `brew install jq`
 - For jq on Linux: Show instructions for apt/yum
 
@@ -56,10 +56,8 @@ The skill will:
 
 **Checkpoint 4: Review PRD**
 
-Detect user's editor and open the PRD file:
-- Try `code tasks/prd-[feature-name].md` (VSCode)
-- Or try `cursor tasks/prd-[feature-name].md` (Cursor)
-- If both fail, tell user: "Please review and edit `tasks/prd-[feature-name].md` in your editor"
+Open the PRD file with the default editor:
+- Run `open tasks/prd-[feature-name].md` to open with default app
 
 Use AskUserQuestion:
 "Review the PRD in `tasks/prd-[feature-name].md`. Ready to proceed?"
@@ -97,7 +95,7 @@ Create config file:
 ```yaml
 ---
 max_iterations: [user's answer]
-editor_command: "code"  # or "cursor" based on detection
+editor_command: "open"
 branch_prefix: "sdk-bridge"
 execution_mode: [foreground|background]
 ---
@@ -138,7 +136,7 @@ Then tell user:
 
 - If prd.json already exists, warn user: "Found existing prd.json. This will be archived when you run SDK Bridge."
 - If tasks/ directory doesn't exist, create it
-- If amp or jq not found and user declines install, exit gracefully with install instructions
+- If claude or jq not found and user declines install, exit gracefully with install instructions
 - If skill loading fails, show helpful error message
 
 ## Success Output
