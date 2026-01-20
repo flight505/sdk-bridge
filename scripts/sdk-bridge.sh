@@ -4,6 +4,25 @@
 
 set -e
 
+# Ensure OAuth token is used (unset API keys that may interfere)
+# Claude CLI prioritizes ANTHROPIC_API_KEY over CLAUDE_CODE_OAUTH_TOKEN
+unset ANTHROPIC_API_KEY ANTHROPIC_ADMIN_KEY
+
+# Verify OAuth token is available
+if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+  echo "Error: CLAUDE_CODE_OAUTH_TOKEN not set"
+  echo ""
+  echo "SDK Bridge requires Claude Code CLI authentication via OAuth token."
+  echo ""
+  echo "To set up:"
+  echo "  1. Run: claude login --oauth"
+  echo "  2. Add to ~/.zshrc or ~/.zsh_secrets:"
+  echo "     export CLAUDE_CODE_OAUTH_TOKEN='your-token-here'"
+  echo "  3. Reload your shell: source ~/.zshrc"
+  echo ""
+  exit 1
+fi
+
 MAX_ITERATIONS=${1:-10}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Work in the user's project directory (current working directory)

@@ -35,8 +35,23 @@ Each iteration is a **fresh Claude instance** with clean context. Memory persist
 - [Claude Code CLI](https://code.claude.com) (comes with Claude Code installation)
 - `jq` JSON parser (`brew install jq` on macOS)
 - Git repository for your project
+- Claude Code OAuth token (long-lived authentication)
 
 SDK Bridge will check for these dependencies and offer to install them automatically.
+
+**Authentication Setup:**
+```bash
+# Generate OAuth token (valid for 1 year)
+claude login --oauth
+
+# Add to your shell profile (~/.zshrc or ~/.zsh_secrets)
+export CLAUDE_CODE_OAUTH_TOKEN='your-token-here'
+
+# Reload your shell
+source ~/.zshrc
+```
+
+The plugin automatically prioritizes OAuth authentication over API keys to ensure consistent, long-lived access.
 
 ---
 

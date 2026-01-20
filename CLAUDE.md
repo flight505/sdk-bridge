@@ -18,6 +18,30 @@ SDK Bridge is an **interactive autonomous development assistant**. It provides a
 
 ---
 
+## Authentication
+
+SDK Bridge requires Claude Code CLI OAuth authentication. The `sdk-bridge.sh` script automatically:
+
+1. **Unsets API keys** - Removes `ANTHROPIC_API_KEY` and `ANTHROPIC_ADMIN_KEY` from the environment
+2. **Verifies OAuth token** - Checks that `CLAUDE_CODE_OAUTH_TOKEN` is set
+3. **Fails gracefully** - Provides setup instructions if token is missing
+
+This ensures consistent authentication across all iterations, prioritizing the long-lived OAuth token over potentially rate-limited API keys.
+
+**Setup:**
+```bash
+# Get OAuth token (valid for 1 year)
+claude login --oauth
+
+# Add to ~/.zshrc or ~/.zsh_secrets
+export CLAUDE_CODE_OAUTH_TOKEN='your-token-here'
+
+# Reload shell
+source ~/.zshrc
+```
+
+---
+
 ## Architecture
 
 ### High-Level Structure
