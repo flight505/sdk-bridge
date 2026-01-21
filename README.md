@@ -2,7 +2,9 @@
 
 ![SDK Bridge Hero](./assets/sdk-bridge-hero.jpg)
 
-**Version 4.0.0** - Complete Rewrite
+[![Version](https://img.shields.io/badge/version-4.0.0-blue.svg)](https://github.com/flight505/sdk-bridge)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)](https://github.com/anthropics/claude-code)
 
 > **Why "SDK Bridge"?** It bridges the gap between your high-level requirements and autonomous AI execution—transforming human intent into working code through the Claude Agent SDK.
 
