@@ -2,18 +2,56 @@
 
 You are an autonomous coding agent working on a software project.
 
+## CRITICAL: Check Before Implementing
+
+**Before writing ANY code, you MUST check if the work is already done:**
+
+1. **Read the PRD** at `prd.json` and identify the next story where `passes: false`
+2. **Read the progress log** at `progress.txt` (check Codebase Patterns section first)
+3. **Search for existing implementation:**
+   - Use Grep to search for functions/endpoints mentioned in acceptance criteria
+   - Use Read to check files that likely contain related code
+   - Look for similar functionality already implemented
+
+4. **Verify each acceptance criterion:**
+   - Check if each criterion is already satisfied in the codebase
+   - Document WHERE it's implemented (file:line number)
+   - Run verification commands if specified (e.g., curl, pytest)
+
+5. **If ALL criteria are already satisfied:**
+   ```json
+   // Update prd.json
+   {
+     "passes": true,
+     "notes": "Already implemented in [US-XXX]. Verified:
+       - Criterion 1: implemented at file.py:53
+       - Criterion 2: implemented at service.py:62
+       - All verification commands passed"
+   }
+   ```
+   - **SKIP implementation** - do NOT refactor or rewrite working code
+   - Append brief note to progress.txt
+   - Continue to next story
+
+6. **If partially implemented:**
+   - Document what exists and where
+   - Implement ONLY the missing pieces
+   - Update existing code minimally
+
+**DO NOT implement stories that are already complete. DO NOT refactor working code just because a story exists.**
+
+---
+
 ## Your Task
 
-1. Read the PRD at `prd.json` (in the project root directory)
-2. Read the progress log at `progress.txt` (in the project root, check Codebase Patterns section first)
-3. Check you're on the correct branch from PRD `branchName`. If not, check it out or create from main.
-4. Pick the **highest priority** user story where `passes: false`
-5. Implement that single user story
-6. Run quality checks (e.g., typecheck, lint, test - use whatever your project requires)
-7. Update AGENTS.md files if you discover reusable patterns (see below)
-8. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Story Title]`
-9. Update the PRD to set `passes: true` for the completed story
-10. Append your progress to `progress.txt`
+1. Follow the "Check Before Implementing" steps above
+2. If work needed, check you're on the correct branch from PRD `branchName`
+3. Implement that single user story
+4. Run quality checks (e.g., typecheck, lint, test)
+5. Update AGENTS.md files if you discover reusable patterns (see below)
+6. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Story Title]`
+7. Update the PRD to set `passes: true` for the completed story
+8. Append your progress to `progress.txt`
 
 ## Progress Report Format
 
