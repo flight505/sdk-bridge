@@ -305,7 +305,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   # Run with timeout
   timeout $ITERATION_TIMEOUT claude -p "$(cat "$SCRIPT_DIR/prompt.md")" \
     --output-format json \
-    --allowedTools "Bash,Read,Edit,Write,Glob,Grep" \
+    --allowedTools "Bash,Read,Edit,Write,Glob,Grep,Skill" \
     --no-session-persistence \
     --model sonnet \
     > "$TEMP_OUTPUT" 2>&1 &
@@ -348,7 +348,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
       TEMP_OUTPUT="/tmp/sdk-bridge-$$-$i-retry.txt"
       timeout $EXTENDED_TIMEOUT claude -p "$(cat "$SCRIPT_DIR/prompt.md")" \
         --output-format json \
-        --allowedTools "Bash,Read,Edit,Write,Glob,Grep" \
+        --allowedTools "Bash,Read,Edit,Write,Glob,Grep,Skill" \
         --no-session-persistence \
         --model sonnet \
         > "$TEMP_OUTPUT" 2>&1 &
