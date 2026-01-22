@@ -153,12 +153,20 @@ After first run, edit `.claude/sdk-bridge.local.md`:
 
 ```yaml
 ---
-max_iterations: 10          # Stop after N iterations
-editor_command: "code"      # Command to open files
-branch_prefix: "sdk-bridge" # Git branch prefix
+max_iterations: 10           # Stop after N iterations
+iteration_timeout: 600       # Timeout per iteration (seconds, default: 600/10min)
+editor_command: "code"       # Command to open files
+branch_prefix: "sdk-bridge"  # Git branch prefix
 execution_mode: "foreground" # or "background"
 ---
 ```
+
+**Configuration options:**
+- `max_iterations`: Maximum number of Claude iterations before stopping
+- `iteration_timeout`: Timeout in seconds for each iteration (default: 600 = 10 minutes)
+- `editor_command`: Your preferred editor (`code`, `cursor`, `vim`, etc.)
+- `branch_prefix`: Git branch prefix for SDK Bridge branches
+- `execution_mode`: `foreground` (interactive) or `background` (autonomous)
 
 ---
 
@@ -175,6 +183,70 @@ execution_mode: "foreground" # or "background"
 - Check progress: `tail -f .claude/sdk-bridge.log`
 - View completion: check `prd.json` for all `passes: true`
 - Stop manually: `kill $(cat .claude/sdk-bridge.pid)`
+
+---
+
+## Resilience Features
+
+SDK Bridge v4 includes robust process management and timeout handling:
+
+### Iteration Timeouts
+
+Each iteration has a configurable timeout (default: 10 minutes) to prevent indefinite hangs.
+
+**Foreground mode:**
+- Interactive prompt when timeout occurs
+- Options to skip, retry with extended timeout, or abort
+- Full control over execution
+
+**Background mode:**
+- Auto-skip timed-out stories
+- Logs timeout to `progress.txt`
+- Continues with next story automatically
+
+### Process Management
+
+- **Clean Ctrl+C:** Gracefully terminates Claude processes, no orphans
+- **Duplicate prevention:** Blocks multiple runs on the same branch
+- **Per-branch PID files:** Allows parallel work on different features
+- **Automatic cleanup:** Removes stale PID files and temp files
+
+### Already-Implemented Detection
+
+Claude agents automatically check if work is already done before implementing:
+- Searches codebase for existing implementation
+- Verifies each acceptance criterion
+- Skips stories where all criteria already met
+- Documents findings in `prd.json` notes
+
+**Example:** If US-005 already implemented cabin_class filtering, US-007 will detect this and mark itself complete in <2 minutes instead of hanging.
+
+---
+
+## Enhanced PRD Generation
+
+SDK Bridge creates high-quality PRDs with:
+
+### Smart Decomposition
+
+- **Simple features** (≤5 criteria): One full-stack story
+- **Complex features** (>5 criteria): Split into layers with dependencies
+
+### Verifiable Criteria
+
+Every acceptance criterion includes:
+- **Must verify:** Specific command or test to run
+- **Expected:** What success looks like
+- **Example:** `Must verify: grep cabin_class api.py` → `Expected: Line shows parameter acceptance`
+
+### Dependency Tracking
+
+- **depends_on:** Hard dependencies (must complete first)
+- **related_to:** Soft dependencies (check for related work)
+- **implementation_hint:** Guidance to prevent duplicate work
+- **check_before_implementing:** Commands to detect existing code
+
+**Benefit:** Prevents wasted iterations and reduces hang scenarios by 30+ minutes per occurrence.
 
 ---
 
@@ -310,19 +382,25 @@ sdk-bridge/
 
 ## What Changed in v4.0.0?
 
-SDK Bridge v4 is a **complete rewrite** with a focus on simplicity:
+SDK Bridge v4 is a **complete rewrite** with a focus on simplicity and resilience:
 
-**After (v4.0):**
-- 1 command, 0 agents, simple bash loop , No more harness. 
-- Claude Code CLI for each iteration
-- Foreground or background execution
-- Interactive PRD generation
+**Key Features:**
+- Single command interactive wizard (`/sdk-bridge:start`)
+- Simple bash loop with fresh Claude instances per iteration
+- Foreground or background execution modes
+- Interactive PRD generation with clarifying questions
+- Robust process management (clean Ctrl+C, no orphans)
+- Configurable iteration timeouts (default: 10 minutes)
+- Already-implemented detection (prevents wasted cycles)
+- Enhanced PRD generation with verifiable criteria and dependency tracking
 
-**Why the change?**
-The previous architecture was over-engineered. This simpler approach works better:
+**Why the rewrite?**
+The previous architecture was over-engineered. This simpler approach:
 - Fresh context each iteration prevents context pollution
 - Bash loop is easier to understand and debug
 - Interactive onboarding makes it accessible
+- Timeout protection prevents indefinite hangs
+- Dependency tracking prevents duplicate work
 - Claude Code CLI's auto-handoff handles large features naturally
 
 ---
