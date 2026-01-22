@@ -15,7 +15,7 @@ Take a PRD (markdown file or text) and convert it to `prd.json` in your project 
 
 ---
 
-## Output Format
+## Output Format (Enhanced Schema)
 
 ```json
 {
@@ -29,16 +29,33 @@ Take a PRD (markdown file or text) and convert it to `prd.json` in your project 
       "description": "As a [user], I want [feature] so that [benefit]",
       "acceptanceCriteria": [
         "Criterion 1",
-        "Criterion 2",
+        "Criterion 2 with verification",
         "Typecheck passes"
       ],
       "priority": 1,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "depends_on": [],
+      "related_to": [],
+      "implementation_hint": "",
+      "check_before_implementing": []
     }
   ]
 }
 ```
+
+### New Schema Fields (Phase 3 Enhancements)
+
+- **depends_on** (array): IDs of stories that MUST complete before this one (e.g., `["US-001", "US-005"]`)
+- **related_to** (array): IDs of stories that may contain related work to check (e.g., `["US-002"]`)
+- **implementation_hint** (string): Guidance like "Check if US-005 already implemented this" or "Reuse existing badge component"
+- **check_before_implementing** (array): Commands to run to verify existing implementation (e.g., `["grep cabin_class api.py"]`)
+
+**When to use each:**
+- `depends_on`: Hard dependency - this story CANNOT be done until dependency completes
+- `related_to`: Soft dependency - check this story for similar code or patterns
+- `implementation_hint`: Free-form text guidance for the agent
+- `check_before_implementing`: Specific search commands to detect existing implementation
 
 ---
 
@@ -123,6 +140,62 @@ Frontend stories are NOT complete until visually verified. SDK Bridge will use t
 4. **All stories**: `passes: false` and empty `notes`
 5. **branchName**: Derive from feature name, kebab-case, prefixed with `sdk-bridge/`
 6. **Always add**: "Typecheck passes" to every story's acceptance criteria
+7. **Infer dependencies**: Detect `depends_on`, `related_to`, and add hints (see below)
+
+### Dependency Inference Rules
+
+**Auto-detect `depends_on`:**
+- Backend stories depend on schema/database stories
+- UI stories depend on backend API/service stories
+- Integration stories depend on component stories
+- Look for explicit "Depends on: US-XXX" in PRD
+
+**Auto-detect `related_to`:**
+- Stories working on the same file/module
+- Stories in the same feature area (e.g., all "priority" stories)
+- Frontend and backend halves of the same feature
+- Later stories in a sequence (US-007 related to US-005, US-006)
+
+**Generate `implementation_hint`:**
+- If `related_to` is not empty: "Check US-XXX for similar implementation"
+- If UI story follows API story: "US-XXX may have already implemented the backend for this"
+- If splitting a feature: "This is part of [feature name], coordinate with US-XXX"
+
+**Generate `check_before_implementing`:**
+- Extract key identifiers from acceptance criteria (e.g., "cabin_class parameter")
+- Create grep commands: `["grep cabin_class api.py", "grep cabin_class service.py"]`
+- For UI: `["grep -r 'CabinClassSelector' components/"]`
+- For database: `["grep priority schema.sql"]`
+
+### Example Dependency Detection
+
+**PRD has:**
+```markdown
+### US-005: Flight search API endpoint
+...
+
+### US-006: Cabin class filter UI
+...
+
+### US-007: Backend cabin class filtering
+Depends on: US-005
+Implementation hint: Check if US-005 already implemented this
+...
+```
+
+**Converted to JSON:**
+```json
+{
+  "id": "US-007",
+  "depends_on": ["US-005"],
+  "related_to": ["US-002", "US-006"],
+  "implementation_hint": "US-005 may have already implemented cabin_class filtering. Check api.py and aggregation_service.py before coding.",
+  "check_before_implementing": [
+    "grep -n cabin_class flight_marketplace/api.py",
+    "grep -n cabin_class flight_marketplace/aggregation_service.py"
+  ]
+}
+```
 
 ---
 
@@ -192,7 +265,14 @@ Add ability to mark tasks with different statuses.
       ],
       "priority": 2,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "depends_on": ["US-001"],
+      "related_to": [],
+      "implementation_hint": "Reuse existing badge component if available, just add status color variants.",
+      "check_before_implementing": [
+        "grep -r 'Badge' components/",
+        "grep status tasks/"
+      ]
     },
     {
       "id": "US-003",

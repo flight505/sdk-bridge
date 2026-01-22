@@ -69,9 +69,15 @@ Specific, measurable objectives (bullet list).
 Each story needs:
 - **Title:** Short descriptive name
 - **Description:** "As a [user], I want [feature] so that [benefit]"
-- **Acceptance Criteria:** Verifiable checklist of what "done" means
+- **Acceptance Criteria:** Verifiable checklist of what "done" means (see requirements below)
+- **Dependencies:** *(Optional)* Which stories must complete first
+- **Implementation Hint:** *(Optional)* Guidance for developer/agent
 
 Each story should be small enough to implement in one focused session.
+
+**Story Size Threshold:**
+- **Simple features** (≤5 acceptance criteria): Create ONE full-stack story combining UI + backend
+- **Complex features** (>5 acceptance criteria): Split into multiple layer-specific stories with clear dependencies
 
 **Format:**
 ```markdown
@@ -80,14 +86,33 @@ Each story should be small enough to implement in one focused session.
 
 **Acceptance Criteria:**
 - [ ] Specific verifiable criterion
+  - **Must verify:** `[command to run or condition to check]`
+  - **Expected:** What success looks like
 - [ ] Another criterion
+  - **Must verify:** `pytest tests/test_feature.py`
+  - **Expected:** All tests pass
 - [ ] Typecheck/lint passes
+  - **Must verify:** `pyright --project .` or `npm run typecheck`
+  - **Expected:** No errors
 - [ ] **[UI stories only]** Verify in browser using dev-browser skill
+  - **Must verify:** Navigate to page and test interaction
+  - **Expected:** Feature works as described
+
+**Depends on:** *(Optional)* US-XXX (if this story requires another to complete first)
+**Implementation hint:** *(Optional)* Check if US-XXX already implemented this. Search for [specific code pattern].
 ```
 
-**Important:** 
-- Acceptance criteria must be verifiable, not vague. "Works correctly" is bad. "Button shows confirmation dialog before deleting" is good.
-- **For any story with UI changes:** Always include "Verify in browser using dev-browser skill" as acceptance criteria. This ensures visual verification of frontend work.
+**CRITICAL Requirements for Acceptance Criteria:**
+- Each criterion MUST include "Must verify: [command]" with a specific verification method
+- Verification can be: command to run, test to execute, condition to check, browser action
+- "Must verify" makes completion unambiguous for AI agents
+- Avoid vague criteria like "Works correctly" - specify HOW to verify it works
+- **For any story with UI changes:** Always include "Verify in browser using dev-browser skill"
+
+**Dependency Guidelines:**
+- Add "Depends on: US-XXX" when a story requires another story's completion
+- Add "Implementation hint" when related work may already exist (prevents duplication)
+- Use "Check if US-XXX already did this" to guide agents to verify before implementing
 
 ### 4. Functional Requirements
 Numbered list of specific functionalities:
@@ -162,37 +187,62 @@ Add priority levels to tasks so users can focus on what matters most. Tasks can 
 
 **Acceptance Criteria:**
 - [ ] Add priority column to tasks table: 'high' | 'medium' | 'low' (default 'medium')
+  - **Must verify:** Check migration file exists and column added
+  - **Expected:** Migration successful, column present in schema
 - [ ] Generate and run migration successfully
+  - **Must verify:** `python manage.py migrate` or equivalent
+  - **Expected:** No errors, migration applied
 - [ ] Typecheck passes
+  - **Must verify:** `pyright --project .` or `npm run typecheck`
+  - **Expected:** No errors
 
-### US-002: Display priority indicator on task cards
-**Description:** As a user, I want to see task priority at a glance so I know what needs attention first.
+### US-002: Complete Priority Display and Selection (Full-Stack)
+**Description:** As a user, I want to see and change task priorities so I can manage what needs attention.
+
+**Note:** This is a simple feature (4 criteria total), so combining UI + backend in one story.
 
 **Acceptance Criteria:**
 - [ ] Each task card shows colored priority badge (red=high, yellow=medium, gray=low)
-- [ ] Priority visible without hovering or clicking
+  - **Must verify:** Navigate to task list in browser
+  - **Expected:** Badges visible on all tasks with correct colors
+- [ ] Priority dropdown in task edit modal with current value selected
+  - **Must verify:** Open edit modal and check dropdown
+  - **Expected:** Dropdown shows 3 options, current priority selected
+- [ ] Changing priority saves immediately and updates UI
+  - **Must verify:** Change priority, verify API call and UI update
+  - **Expected:** No page refresh needed, change persists
 - [ ] Typecheck passes
+  - **Must verify:** `npm run typecheck`
+  - **Expected:** No errors
 - [ ] Verify in browser using dev-browser skill
+  - **Must verify:** Full flow: view badge, edit priority, verify change
+  - **Expected:** All interactions work smoothly
 
-### US-003: Add priority selector to task edit
-**Description:** As a user, I want to change a task's priority when editing it.
+**Depends on:** US-001 (requires priority column in database)
+**Implementation hint:** Reuse existing badge component, just add color variants for priority.
 
-**Acceptance Criteria:**
-- [ ] Priority dropdown in task edit modal
-- [ ] Shows current priority as selected
-- [ ] Saves immediately on selection change
-- [ ] Typecheck passes
-- [ ] Verify in browser using dev-browser skill
-
-### US-004: Filter tasks by priority
+### US-003: Filter tasks by priority
 **Description:** As a user, I want to filter the task list to see only high-priority items when I'm focused.
 
 **Acceptance Criteria:**
 - [ ] Filter dropdown with options: All | High | Medium | Low
+  - **Must verify:** Navigate to task list, check filter dropdown
+  - **Expected:** 4 options visible and selectable
 - [ ] Filter persists in URL params
+  - **Must verify:** Select filter, check URL contains `?priority=high`
+  - **Expected:** URL updates, refresh preserves filter
 - [ ] Empty state message when no tasks match filter
+  - **Must verify:** Filter to priority with no tasks
+  - **Expected:** Shows "No tasks found" or similar message
 - [ ] Typecheck passes
+  - **Must verify:** `npm run typecheck`
+  - **Expected:** No errors
 - [ ] Verify in browser using dev-browser skill
+  - **Must verify:** Test all filter options and URL persistence
+  - **Expected:** Filtering works, URL updates correctly
+
+**Depends on:** US-002 (requires priority display to filter)
+**Implementation hint:** Check if existing filter pattern used elsewhere, follow same approach.
 
 ## Functional Requirements
 
