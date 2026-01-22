@@ -17,3 +17,22 @@ sdk-bridge-architecture_v1.png
 
 # Git worktrees
 .worktrees/
+
+# SDK Bridge runtime artifacts (test contamination prevention)
+prd.json
+progress.txt
+tasks/
+.last-branch
+archive/
+
+# Test databases
+*.db
+*.sqlite
+
+# Python virtual environments
+.venv/
+__pycache__/
+
+# Generated code from autonomous runs
+flight_marketplace/
+run_dev_server.py
