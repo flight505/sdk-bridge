@@ -1,7 +1,7 @@
 {
   "name": "sdk-bridge",
-  "version": "4.3.1",
-  "description": "Interactive autonomous development assistant - generates PRDs, converts to execution format, and runs fresh Claude agent loops until complete.",
+  "version": "4.4.0",
+  "description": "Interactive autonomous development assistant - generates PRDs, converts to execution format, and runs fresh Claude instances until complete.",
   "author": {
     "name": "Jesper Vang",
     "url": "https://github.com/flight505"

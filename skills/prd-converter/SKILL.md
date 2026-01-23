@@ -63,20 +63,51 @@ Take a PRD (markdown file or text) and convert it to `prd.json` in your project 
 
 **Each story must be completable in ONE SDK Bridge iteration (one context window).**
 
-SDK Bridge spawns a fresh Amp instance per iteration with no memory of previous work. If a story is too big, the LLM runs out of context before finishing and produces broken code.
+SDK Bridge spawns a fresh Claude instance per iteration with no memory of previous work. If a story is too big, the LLM runs out of context before finishing and produces broken code.
 
-### Right-sized stories:
-- Add a database column and migration
-- Add a UI component to an existing page
-- Update a server action with new logic
-- Add a filter dropdown to a list
+### Right-sized stories (3-5 criteria):
+**Data Layer:**
+- Add new field to data model with validation
+- Create migration for schema change
+- Implement data access method for new query
 
-### Too big (split these):
-- "Build the entire dashboard" - Split into: schema, queries, UI components, filters
-- "Add authentication" - Split into: schema, middleware, login UI, session handling
-- "Refactor the API" - Split into one story per endpoint or pattern
+**Logic Layer:**
+- Add business rule validation
+- Implement calculation or transformation logic
+- Add error handling for specific failure case
+
+**Presentation Layer:**
+- Create reusable component with basic functionality
+- Add interaction handler (click, submit, etc.)
+- Implement visual state (loading, error, success)
+
+### Too big (8+ criteria - must split):
+**Pattern:** "Build entire [subsystem]"
+- ❌ Single story: All layers combined
+- ✅ Split into: Data → Logic → Presentation → Integration
+
+**Pattern:** "Add complex [feature]"
+- ❌ Single story: All configuration + functionality + edge cases
+- ✅ Split into: Core behavior → Options → Error handling
+
+**Pattern:** "Refactor [large module]"
+- ❌ Single story: Entire module at once
+- ✅ Split into: One story per file/function/component
 
 **Rule of thumb:** If you cannot describe the change in 2-3 sentences, it is too big.
+
+**Validation Rules:**
+- ✅ **Ideal:** 3-5 acceptance criteria (including typecheck/browser verification)
+- ⚠️ **Warning:** 6-7 criteria - consider splitting if possible
+- ❌ **Too large:** 8+ criteria - MUST split into multiple stories
+- **Time target:** Each story should complete in 10-20 minutes
+
+**After converting, check for oversized stories:**
+```bash
+jq '.userStories[] | select((.acceptanceCriteria | length) > 7) | "\(.id): \(.title) - \(.acceptanceCriteria | length) criteria (TOO LARGE)"'
+```
+
+If you find stories with 8+ criteria, recommend splitting them in your output.
 
 ---
 
@@ -150,6 +181,26 @@ Frontend stories are NOT complete until visually verified. SDK Bridge will use t
 - Integration stories depend on component stories
 - Look for explicit "Depends on: US-XXX" in PRD
 
+**⚠️ Avoid False Dependencies:**
+- NOT all stories need to depend on the previous story
+- Stories can run in parallel if they work on different files/modules
+- Only add `depends_on` for TRUE blocking dependencies
+- **Test:** Can this story be implemented without the previous story being complete? If yes, don't add dependency
+
+**True Dependencies (add `depends_on`):**
+- Data model required before business logic using it
+- API endpoint required before UI consuming it
+- Authentication required before protected features
+- Base component required before extensions/variants
+- Configuration required before features using it
+
+**False Dependencies (NO `depends_on`, use `related_to`):**
+- Two UI components in different parts of the app
+- Two API endpoints serving different purposes
+- Two database tables with no foreign key relationship
+- Parallel implementation tracks (e.g., UI theme + API layer)
+- Sequential numbering doesn't imply dependency
+
 **Auto-detect `related_to`:**
 - Stories working on the same file/module
 - Stories in the same feature area (e.g., all "priority" stories)
@@ -157,64 +208,93 @@ Frontend stories are NOT complete until visually verified. SDK Bridge will use t
 - Later stories in a sequence (US-007 related to US-005, US-006)
 
 **Generate `implementation_hint`:**
-- If `related_to` is not empty: "Check US-XXX for similar implementation"
-- If UI story follows API story: "US-XXX may have already implemented the backend for this"
-- If splitting a feature: "This is part of [feature name], coordinate with US-XXX"
+- If `related_to` is not empty: "Check US-XXX for similar implementation patterns"
+- If UI story follows data/API story: "US-XXX may have already implemented the data layer for this"
+- If splitting a feature: "This is part of [feature area], coordinate with US-XXX for consistency"
+- If extending existing work: "Builds on US-XXX, review that implementation before starting"
 
 **Generate `check_before_implementing`:**
-- Extract key identifiers from acceptance criteria (e.g., "cabin_class parameter")
-- Create grep commands: `["grep cabin_class api.py", "grep cabin_class service.py"]`
-- For UI: `["grep -r 'CabinClassSelector' components/"]`
-- For database: `["grep priority schema.sql"]`
+Extract key identifiers from acceptance criteria and create search commands:
 
-### Example Dependency Detection
+**For data models:** `grep -rn "[ModelName]\|[field_name]" src/models/`
+**For API/services:** `grep -rn "[endpoint_name]\|[function_name]" src/api/ src/services/`
+**For UI components:** `grep -rn "[ComponentName]" src/components/ src/pages/`
+**For configuration:** `grep -rn "[config_key]" config/ .env`
 
-**PRD has:**
+Use actual identifiers from the story (class names, function names, field names), not generic terms.
+
+### Example: Dependency Detection
+
+**Scenario:** Feature requiring data model, API endpoint, and UI
+
+**PRD Stories:**
 ```markdown
-### US-005: Flight search API endpoint
-...
-
-### US-006: Cabin class filter UI
-...
-
-### US-007: Backend cabin class filtering
-Depends on: US-005
-Implementation hint: Check if US-005 already implemented this
-...
+### US-010: Add status field to data model
+### US-011: Create filtering API endpoint
+### US-012: Build filter UI component
 ```
+
+**Dependency Analysis:**
+- US-011 needs US-010 (can't filter by status field that doesn't exist) → `depends_on: ["US-010"]`
+- US-012 needs US-011 (UI needs API to call) → `depends_on: ["US-011"]`
+- US-012 related to US-010 (both involve "status" concept) → `related_to: ["US-010"]`
 
 **Converted to JSON:**
 ```json
 {
-  "id": "US-007",
-  "depends_on": ["US-005"],
-  "related_to": ["US-002", "US-006"],
-  "implementation_hint": "US-005 may have already implemented cabin_class filtering. Check api.py and aggregation_service.py before coding.",
+  "id": "US-012",
+  "title": "Build filter UI component",
+  "depends_on": ["US-011"],
+  "related_to": ["US-010"],
+  "implementation_hint": "US-010 added the status field to the data model. US-011 implemented the filtering endpoint. Review both for field names and API contract.",
   "check_before_implementing": [
-    "grep -n cabin_class flight_marketplace/api.py",
-    "grep -n cabin_class flight_marketplace/aggregation_service.py"
+    "grep -rn 'status' src/models/",
+    "grep -rn 'filter.*status' src/api/"
   ]
 }
 ```
 
 ---
 
-## Splitting Large PRDs
+## Splitting Large Features
 
-If a PRD has big features, split them:
+Apply systematic decomposition when features have 8+ acceptance criteria:
 
-**Original:**
-> "Add user notification system"
+**Pattern 1: Layer-Based Split**
+```
+Monolithic: "Add [feature] system"
+↓
+Decomposed:
+1. "Implement [feature] data model"
+2. "Create [feature] business logic"
+3. "Build [feature] API endpoints"
+4. "Design [feature] UI components"
+5. "Add [feature] user workflows"
+```
 
-**Split into:**
-1. US-001: Add notifications table to database
-2. US-002: Create notification service for sending notifications
-3. US-003: Add notification bell icon to header
-4. US-004: Create notification dropdown panel
-5. US-005: Add mark-as-read functionality
-6. US-006: Add notification preferences page
+**Pattern 2: Capability-Based Split**
+```
+Monolithic: "Build advanced [feature]"
+↓
+Decomposed:
+1. "Implement basic [feature] functionality"
+2. "Add [feature] configuration options"
+3. "Implement [feature] batch operations"
+4. "Add [feature] export capability"
+```
 
-Each is one focused change that can be completed and verified independently.
+**Pattern 3: Journey-Based Split**
+```
+Monolithic: "Implement [workflow]"
+↓
+Decomposed:
+1. "Implement [workflow] step 1: [action]"
+2. "Implement [workflow] step 2: [action]"
+3. "Implement [workflow] step 3: [action]"
+4. "Add [workflow] error recovery"
+```
+
+Each story focuses on one responsibility and can be verified independently.
 
 ---
 

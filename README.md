@@ -6,11 +6,19 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)](https://github.com/anthropics/claude-code)
 
-> **Why "SDK Bridge"?** It bridges the gap between your high-level requirements and autonomous AI execution—transforming human intent into working code through the Claude Agent SDK.
+> **Why "SDK Bridge"?** It bridges the gap between your high-level requirements and autonomous AI execution—transforming human intent into working code through the Claude Code CLI.
 
 Interactive autonomous development assistant that generates PRDs, converts them to execution format, and runs fresh Claude agent loops until all work is complete.
 
 Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
+
+---
+
+## Architecture
+
+![SDK Bridge Architecture](./assets/sdk-bridge-architecture.png)
+
+SDK Bridge uses a bash orchestration loop that spawns fresh Claude CLI instances for each iteration, with state persistence via JSON files.
 
 ---
 
@@ -155,18 +163,26 @@ After first run, edit `.claude/sdk-bridge.local.md`:
 ---
 max_iterations: 10           # Stop after N iterations
 iteration_timeout: 900       # Timeout per iteration (seconds, default: 900/15min)
+execution_mode: "foreground" # "foreground" or "background"
+execution_model: "sonnet"    # "sonnet" or "opus"
 editor_command: "code"       # Command to open files
 branch_prefix: "sdk-bridge"  # Git branch prefix
-execution_mode: "foreground" # or "background"
 ---
 ```
 
 **Configuration options:**
 - `max_iterations`: Maximum number of Claude iterations before stopping
 - `iteration_timeout`: Timeout in seconds for each iteration (default: 900 = 15 minutes)
+- `execution_mode`: `foreground` (interactive) or `background` (autonomous)
+- `execution_model`: `sonnet` (fast, default) or `opus` (best quality, slower)
 - `editor_command`: Your preferred editor (`code`, `cursor`, `vim`, etc.)
 - `branch_prefix`: Git branch prefix for SDK Bridge branches
-- `execution_mode`: `foreground` (interactive) or `background` (autonomous)
+
+**Model Selection:**
+- **Planning phase** (PRD generation): Set `export CLAUDE_CODE_SUBAGENT_MODEL=opus` for best results
+- **Implementation phase** (story execution): Choose `sonnet` or `opus` via wizard or config
+- Sonnet: Fast and efficient, good for most tasks
+- Opus: Best code quality, fewer bugs, better at complex reasoning (recommended for Max subscribers)
 
 ---
 

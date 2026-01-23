@@ -123,6 +123,24 @@ progress.txt                 # Learnings log (append-only)
 
 ## Development Guidelines
 
+### When in doubt or asked, use the claude-docs-skill
+
+**Claude API Documentation with 4-Tier Routing**
+
+- `Triggers`: "claude docs skill", "use claude docs", "claude api", "anthropic api", "agent sdk", "claude models", "tool use", "extended thinking", "mcp"
+
+**4-Tier System:**
+- Tier 1: Quick reference primer
+- Tier 2: Pattern library (8 cookbooks)
+- Tier 3: Recent changes log
+- Tier 4: Complete reference (LLM-optimized)
+
+**Coverage:** Claude API (Messages, Batches, Models, Admin) • Agent SDK (Python, TypeScript) • Tool use, Extended thinking, Streaming, Batching • Vision, PDF, MCP • Prompt engineering, Testing, Security
+
+**Use Cases:** Quick syntax lookups • Real-world patterns • Track API updates • Deep endpoint reference
+
+
+
 ### Modifying Components
 
 **Commands (`start.md`):**
@@ -192,11 +210,17 @@ git add --chmod=+x scripts/*.sh
 ---
 max_iterations: 10           # Stop after N iterations
 iteration_timeout: 900       # Timeout per iteration (seconds)
+execution_mode: "foreground" # "foreground" or "background"
+execution_model: "sonnet"    # "sonnet" or "opus" for story implementation
 editor_command: "code"       # Command to open files
 branch_prefix: "sdk-bridge"  # Git branch prefix
-execution_mode: "foreground" # "foreground" or "background"
 ---
 ```
+
+**Model Selection:**
+- `execution_model`: Which Claude model implements the stories (sonnet or opus)
+- Planning (PRD generation) uses `CLAUDE_CODE_SUBAGENT_MODEL` env var (recommend: opus)
+- Implementation uses `execution_model` config (default: sonnet)
 
 ---
 

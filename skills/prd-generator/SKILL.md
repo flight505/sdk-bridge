@@ -73,11 +73,54 @@ Each story needs:
 - **Dependencies:** *(Optional)* Which stories must complete first
 - **Implementation Hint:** *(Optional)* Guidance for developer/agent
 
-Each story should be small enough to implement in one focused session.
+Each story should be small enough to implement in one focused session (typically 10-20 minutes of work).
 
 **Story Size Threshold:**
-- **Simple features** (≤5 acceptance criteria): Create ONE full-stack story combining UI + backend
-- **Complex features** (>5 acceptance criteria): Split into multiple layer-specific stories with clear dependencies
+- **Simple features** (≤4 acceptance criteria): Create ONE full-stack story combining UI + backend
+- **Complex features** (>4 acceptance criteria): Split into multiple layer-specific stories with clear dependencies
+- **Target:** 3-5 acceptance criteria per story (including typecheck/browser verification)
+- **Maximum:** Never exceed 6 criteria - if a story needs more, it must be split
+
+**How to Split Large Features:**
+
+Apply layer-based decomposition matching your architecture:
+
+**Backend/API Layer:**
+1. Data model/schema changes
+2. Core business logic/services
+3. Validation and error handling
+
+**Frontend/UI Layer:**
+1. Component structure and state
+2. User interactions and events
+3. Visual polish and accessibility
+
+**Full-Stack Integration:**
+1. Data persistence layer
+2. Server/API endpoints
+3. Client components
+4. End-to-end integration
+
+**Pattern: Break by Responsibility**
+- ❌ **Too broad:** "Add [feature name]"
+- ✅ **Right-sized:**
+  - "Implement [feature] data model"
+  - "Build [feature] API endpoints"
+  - "Create [feature] UI components"
+
+**Pattern: Break by User Journey Step**
+- ❌ **Too broad:** "Build [workflow]"
+- ✅ **Right-sized:**
+  - "Implement [workflow] step 1: [action]"
+  - "Implement [workflow] step 2: [action]"
+  - "Implement [workflow] step 3: [action]"
+
+**Pattern: Break by Complexity Layer**
+- ❌ **Too broad:** "Add advanced [feature]"
+- ✅ **Right-sized:**
+  - "Implement basic [feature] functionality"
+  - "Add [feature] configuration options"
+  - "Implement [feature] edge case handling"
 
 **Format:**
 ```markdown

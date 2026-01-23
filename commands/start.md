@@ -7,12 +7,13 @@ allowed-tools: ["Bash", "Read", "Write", "Edit", "Task", "AskUserQuestion", "Tod
 # SDK Bridge Start
 
 Interactive wizard that guides you through the complete SDK Bridge workflow:
-1. Describe your project/feature
-2. Generate PRD with clarifying questions
-3. Review and approve PRD
-4. Convert to execution format
-5. Configure execution settings
-6. Launch autonomous agent loop
+1. Check dependencies
+2. Describe your project/feature
+3. Generate PRD with clarifying questions
+4. Review and approve PRD
+5. Convert to execution format
+6. Configure execution settings
+7. Launch autonomous agent loop
 
 ## Execution
 
@@ -24,9 +25,14 @@ First, verify required dependencies are installed:
 ${CLAUDE_PLUGIN_ROOT}/scripts/check-deps.sh
 ```
 
-If dependencies are missing, use AskUserQuestion to ask:
-"SDK Bridge requires these tools: [list missing]. Install automatically?"
-- Options: "Yes - install for me" / "No - I'll install manually"
+If dependencies are missing, use AskUserQuestion:
+
+Question: "SDK Bridge requires these tools: [list missing]. Install automatically?"
+- Header: "Install"
+- multiSelect: false
+- Options:
+  - Label: "Yes - install for me" | Description: "Automatically install missing dependencies"
+  - Label: "No - I'll install manually" | Description: "Show installation instructions and exit"
 
 If user approves automatic install:
 - For claude CLI: Explain that the `claude` command comes with Claude Code and should already be available. If not found, the user may need to reinstall Claude Code or add it to their PATH.
@@ -37,12 +43,38 @@ If user approves automatic install:
 
 If user declines or install fails, show manual installation instructions and exit.
 
+**Optional: Optimize Planning Quality**
+
+For best results, configure Opus for PRD generation (Steps 3 & 5 use subagents):
+
+```bash
+# Add to ~/.zshrc or ~/.bashrc
+export CLAUDE_CODE_SUBAGENT_MODEL=opus
+```
+
+This makes the PRD generator and converter use Opus for superior reasoning. The planning phase only runs once, so the cost is minimal. Restart your terminal after adding this.
+
 **Checkpoint 2: Project Input**
 
-Use AskUserQuestion to ask:
-"Describe your feature or project. You can type a description or use @file to reference a spec/outline."
+Display to user:
+"📝 **Step 2/7: Describe Your Project**
 
-Text field for user input (supports @file references).
+Please provide your project description. You can:
+- Type your description directly
+- Reference files with @filename (e.g., @docs/spec.md)
+- Use file paths (e.g., ~/tasks/plan.md)
+- Combine description + file references
+
+*What would you like to build?*"
+
+Wait for user's next message.
+
+**After receiving user message:**
+- Extract any @file references and read those files using the Read tool
+- Capture description text from the message
+- Combine file contents and description into a single project_input variable
+- If the input seems insufficient, ask clarifying questions before proceeding
+- Proceed to Checkpoint 3
 
 **Checkpoint 3: Generate PRD**
 
@@ -62,11 +94,19 @@ Open the PRD file with the default editor:
 - Run `open tasks/prd-[feature-name].md` to open with default app
 
 Use AskUserQuestion:
-"Review the PRD in `tasks/prd-[feature-name].md`. Ready to proceed?"
-- Options: "Approved - convert to JSON" / "Need more edits - wait" / "Start over"
 
-If "wait", pause and ask again after user confirms edits saved.
-If "start over", return to Checkpoint 2.
+Question: "Review the PRD in `tasks/prd-[feature-name].md`. Ready to proceed?"
+- Header: "PRD Review"
+- multiSelect: false
+- Options:
+  - Label: "Approved - convert to JSON" | Description: "PRD looks good, proceed to execution format"
+  - Label: "Need edits - wait" | Description: "Let me edit the file first, then ask again"
+  - Label: "Start over" | Description: "Regenerate PRD from scratch"
+
+**After collecting answer:**
+- If "Need edits - wait": Pause and display "Make your edits to tasks/prd-[feature-name].md and let me know when ready." Wait for user confirmation, then ask the same question again.
+- If "Start over": Return to Checkpoint 2
+- If "Approved - convert to JSON": Proceed to Checkpoint 5
 
 **Checkpoint 5: Convert to JSON**
 
@@ -84,20 +124,25 @@ The skill will:
 
 Create `.claude/sdk-bridge.local.md` configuration if it doesn't exist.
 
-Use AskUserQuestion to collect settings:
+Use AskUserQuestion to collect settings (all 3 questions in one call for tabbed UI):
 
-Question 1: "Max iterations before stopping?"
-- Default value: "10"
-- Text field for number
+Question 1: "How many iterations before stopping?"
+- Header: "Iterations"
+- multiSelect: false
+- Options:
+  - Label: "5 iterations" | Description: "Quick experiments or small features"
+  - Label: "10 iterations" | Description: "Standard projects (recommended)"
+  - Label: "15 iterations" | Description: "Complex projects with many stories"
+  - Label: "20 iterations" | Description: "Large refactors or extensive work"
 
 Question 2: "How long should each story iteration be allowed to run?"
 - Header: "Timeout"
 - multiSelect: false
-- Options (4 max):
-  - Label: "5 minutes" | Description: "Simple stories with minimal changes"
-  - Label: "10 minutes" | Description: "Standard stories with moderate complexity"
-  - Label: "15 minutes" | Description: "Complex stories - large refactors, UI testing (recommended)"
-  - Label: "20 minutes" | Description: "Very complex stories - extensive exploration needed"
+- Options:
+  - Label: "10 minutes" | Description: "Quick fixes or simple additions"
+  - Label: "20 minutes" | Description: "Standard complexity stories"
+  - Label: "30 minutes" | Description: "Complex integrations, full-stack work (recommended)"
+  - Label: "60 minutes" | Description: "Extremely complex - major refactors, extensive exploration"
 
 Question 3: "How do you want to run SDK Bridge?"
 - Header: "Mode"
@@ -106,26 +151,63 @@ Question 3: "How do you want to run SDK Bridge?"
   - Label: "Foreground" | Description: "See live output as Claude works (blocks terminal)"
   - Label: "Background" | Description: "Continue working while it runs (check .claude/sdk-bridge.log)"
 
-**After collecting answers, convert timeout to seconds:**
-- "5 minutes" → 300
-- "10 minutes" → 600
-- "15 minutes" → 900
-- "20 minutes" → 1200
-- Custom input → multiply by 60
+Question 4: "Which model should implement the stories?"
+- Header: "Model"
+- multiSelect: false
+- Options:
+  - Label: "Sonnet" | Description: "Fast and efficient - good for most tasks (recommended)"
+  - Label: "Opus" | Description: "Best quality - fewer bugs, better at complex code (slower, costs more for API users)"
 
-Create config file:
+**After collecting answers, parse values:**
+
+For iterations (Question 1):
+- "5 iterations" → 5
+- "10 iterations" → 10
+- "15 iterations" → 15
+- "20 iterations" → 20
+- Custom input (via "Other") → parse number from string
+
+For timeout (Question 2):
+- "10 minutes" → 600
+- "20 minutes" → 1200
+- "30 minutes" → 1800
+- "60 minutes" → 3600
+- Custom input (via "Other") → multiply number by 60
+
+For mode (Question 3):
+- "Foreground" → foreground
+- "Background" → background
+
+For model (Question 4):
+- "Sonnet" → sonnet
+- "Opus" → opus
+
+Create config file with parsed values:
 ```yaml
 ---
-max_iterations: [user's answer from Q1]
-iteration_timeout: [user's answer from Q2 converted to seconds: 5min=300, 10min=600, 15min=900, 20min=1200]
+max_iterations: [parsed number from Q1]
+iteration_timeout: [parsed seconds from Q2]
+execution_mode: [parsed mode from Q3]
+execution_model: [parsed model from Q4]
 editor_command: "open"
 branch_prefix: "sdk-bridge"
-execution_mode: [user's answer from Q3: foreground|background]
 ---
 
 # SDK Bridge Configuration
 
 Edit these settings as needed and run `/sdk-bridge:start` again.
+```
+
+Example:
+```yaml
+---
+max_iterations: 10
+iteration_timeout: 900
+execution_mode: foreground
+execution_model: sonnet
+editor_command: "open"
+branch_prefix: "sdk-bridge"
+---
 ```
 
 **Checkpoint 7: Launch**

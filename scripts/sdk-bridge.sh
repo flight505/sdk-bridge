@@ -153,6 +153,16 @@ if [ -f "$CONFIG_FILE" ]; then
   fi
 fi
 
+# Determine execution model (sonnet or opus)
+EXECUTION_MODEL="sonnet"
+if [ -f "$CONFIG_FILE" ]; then
+  MODEL_FROM_CONFIG=$(grep -A 10 "^---$" "$CONFIG_FILE" | grep "execution_model:" | sed 's/.*: *//' || echo "")
+  if [ -n "$MODEL_FROM_CONFIG" ]; then
+    EXECUTION_MODEL=$MODEL_FROM_CONFIG
+    echo "[INIT] Execution model: $EXECUTION_MODEL" >&2
+  fi
+fi
+
 # Archive previous run if branch changed
 if [ -f "$PRD_FILE" ] && [ -f "$LAST_BRANCH_FILE" ]; then
   CURRENT_BRANCH=$(jq -r '.branchName // empty' "$PRD_FILE" 2>/dev/null || echo "")
@@ -328,7 +338,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     --output-format json \
     --allowedTools "Bash,Read,Edit,Write,Glob,Grep,Skill" \
     --no-session-persistence \
-    --model sonnet \
+    --model "$EXECUTION_MODEL" \
     > "$TEMP_OUTPUT" 2>&1 &
 
   # Track PID for cleanup
@@ -371,7 +381,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
         --output-format json \
         --allowedTools "Bash,Read,Edit,Write,Glob,Grep,Skill" \
         --no-session-persistence \
-        --model sonnet \
+        --model "$EXECUTION_MODEL" \
         > "$TEMP_OUTPUT" 2>&1 &
 
       CURRENT_CLAUDE_PID=$!
