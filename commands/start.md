@@ -90,17 +90,30 @@ Question 1: "Max iterations before stopping?"
 - Default value: "10"
 - Text field for number
 
-Question 2: "Iteration timeout (minutes per story)?"
+Question 2: "How long should each story iteration be allowed to run?"
+- Header: "Timeout"
+- multiSelect: false
+- Options (4 max):
+  - Label: "5 minutes" | Description: "Simple stories with minimal changes"
+  - Label: "10 minutes" | Description: "Standard stories with moderate complexity"
+  - Label: "15 minutes" | Description: "Complex stories - large refactors, UI testing (recommended)"
+  - Label: "20 minutes" | Description: "Very complex stories - extensive exploration needed"
+
+Question 3: "How do you want to run SDK Bridge?"
+- Header: "Mode"
+- multiSelect: false
 - Options:
-  - "5 minutes - Simple stories"
-  - "10 minutes - Standard stories"
-  - "15 minutes - Complex stories (recommended)"
-  - "20 minutes - Large refactors"
+  - Label: "Foreground" | Description: "See live output as Claude works (blocks terminal)"
+  - Label: "Background" | Description: "Continue working while it runs (check .claude/sdk-bridge.log)"
 
-Question 3: "Execution mode?"
-- Options: "Foreground (see live output)" / "Background (continue working)"
+**After collecting answers, convert timeout to seconds:**
+- "5 minutes" → 300
+- "10 minutes" → 600
+- "15 minutes" → 900
+- "20 minutes" → 1200
+- Custom input → multiply by 60
 
-Convert timeout to seconds and create config file:
+Create config file:
 ```yaml
 ---
 max_iterations: [user's answer from Q1]
