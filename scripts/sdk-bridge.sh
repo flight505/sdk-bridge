@@ -129,8 +129,8 @@ ARCHIVE_DIR="$PROJECT_DIR/archive"
 LAST_BRANCH_FILE="$PROJECT_DIR/.last-branch"
 CONFIG_FILE="$PROJECT_DIR/.claude/sdk-bridge.local.md"
 
-# Read timeout from config or use default (600 seconds = 10 minutes)
-ITERATION_TIMEOUT=600
+# Read timeout from config or use default (900 seconds = 15 minutes)
+ITERATION_TIMEOUT=900
 if [ -f "$CONFIG_FILE" ]; then
   echo "[INIT] Reading configuration from $CONFIG_FILE" >&2
   # Extract iteration_timeout from YAML frontmatter

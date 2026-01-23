@@ -79,7 +79,7 @@ progress.txt                 # Learnings log (append-only)
 ### 1. Resilience & Process Management
 
 **Iteration Timeouts:**
-- Default: 600 seconds (10 minutes)
+- Default: 900 seconds (15 minutes)
 - Configurable via `iteration_timeout` in config
 - Foreground: Interactive prompt (skip/retry/abort)
 - Background: Auto-skip with logging
@@ -191,7 +191,7 @@ git add --chmod=+x scripts/*.sh
 ```yaml
 ---
 max_iterations: 10           # Stop after N iterations
-iteration_timeout: 600       # Timeout per iteration (seconds)
+iteration_timeout: 900       # Timeout per iteration (seconds)
 editor_command: "code"       # Command to open files
 branch_prefix: "sdk-bridge"  # Git branch prefix
 execution_mode: "foreground" # "foreground" or "background"
@@ -269,7 +269,7 @@ head -5 skills/*/SKILL.md
 - Interactive wizard with 7 checkpoints
 - PRD generator skill with smart decomposition (5-criteria threshold)
 - PRD converter skill with dependency inference
-- Configurable iteration timeouts (default: 10 min)
+- Configurable iteration timeouts (default: 15 min)
 - Mode-based timeout recovery (interactive/auto-skip)
 - Already-implemented detection (prompt-based)
 - Robust process management (trap-based cleanup, per-branch PIDs)

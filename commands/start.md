@@ -97,6 +97,7 @@ Create config file:
 ```yaml
 ---
 max_iterations: [user's answer]
+iteration_timeout: 900
 editor_command: "open"
 branch_prefix: "sdk-bridge"
 execution_mode: [foreground|background]

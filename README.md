@@ -154,7 +154,7 @@ After first run, edit `.claude/sdk-bridge.local.md`:
 ```yaml
 ---
 max_iterations: 10           # Stop after N iterations
-iteration_timeout: 600       # Timeout per iteration (seconds, default: 600/10min)
+iteration_timeout: 900       # Timeout per iteration (seconds, default: 900/15min)
 editor_command: "code"       # Command to open files
 branch_prefix: "sdk-bridge"  # Git branch prefix
 execution_mode: "foreground" # or "background"
@@ -163,7 +163,7 @@ execution_mode: "foreground" # or "background"
 
 **Configuration options:**
 - `max_iterations`: Maximum number of Claude iterations before stopping
-- `iteration_timeout`: Timeout in seconds for each iteration (default: 600 = 10 minutes)
+- `iteration_timeout`: Timeout in seconds for each iteration (default: 900 = 15 minutes)
 - `editor_command`: Your preferred editor (`code`, `cursor`, `vim`, etc.)
 - `branch_prefix`: Git branch prefix for SDK Bridge branches
 - `execution_mode`: `foreground` (interactive) or `background` (autonomous)
@@ -192,7 +192,7 @@ SDK Bridge v4 includes robust process management and timeout handling:
 
 ### Iteration Timeouts
 
-Each iteration has a configurable timeout (default: 10 minutes) to prevent indefinite hangs.
+Each iteration has a configurable timeout (default: 15 minutes) to prevent indefinite hangs.
 
 **Foreground mode:**
 - Interactive prompt when timeout occurs
@@ -390,7 +390,7 @@ SDK Bridge v4 is a **complete rewrite** with a focus on simplicity and resilienc
 - Foreground or background execution modes
 - Interactive PRD generation with clarifying questions
 - Robust process management (clean Ctrl+C, no orphans)
-- Configurable iteration timeouts (default: 10 minutes)
+- Configurable iteration timeouts (default: 15 minutes)
 - Already-implemented detection (prevents wasted cycles)
 - Enhanced PRD generation with verifiable criteria and dependency tracking
 
