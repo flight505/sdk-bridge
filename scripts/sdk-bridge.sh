@@ -95,6 +95,27 @@ else
 fi
 
 # ============================================================================
+# Timeout Command Detection
+# ============================================================================
+
+# Detect which timeout command is available (GNU coreutils)
+# macOS with Homebrew coreutils: gtimeout
+# Linux: timeout
+if command -v gtimeout &> /dev/null; then
+  TIMEOUT_CMD="gtimeout"
+elif command -v timeout &> /dev/null; then
+  TIMEOUT_CMD="timeout"
+else
+  echo "Error: timeout command not found (GNU coreutils required)"
+  echo ""
+  echo "Install coreutils:"
+  echo "  macOS: brew install coreutils"
+  echo "  Linux: sudo apt-get install coreutils"
+  echo ""
+  exit 1
+fi
+
+# ============================================================================
 # Configuration
 # ============================================================================
 
@@ -303,7 +324,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   echo "[ITER-$i] Timeout: ${ITERATION_TIMEOUT}s" >&2
 
   # Run with timeout
-  timeout $ITERATION_TIMEOUT claude -p "$(cat "$SCRIPT_DIR/prompt.md")" \
+  $TIMEOUT_CMD $ITERATION_TIMEOUT claude -p "$(cat "$SCRIPT_DIR/prompt.md")" \
     --output-format json \
     --allowedTools "Bash,Read,Edit,Write,Glob,Grep,Skill" \
     --no-session-persistence \
@@ -346,7 +367,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
       echo "Retrying iteration $i with ${EXTENDED_TIMEOUT}s timeout..."
 
       TEMP_OUTPUT="/tmp/sdk-bridge-$$-$i-retry.txt"
-      timeout $EXTENDED_TIMEOUT claude -p "$(cat "$SCRIPT_DIR/prompt.md")" \
+      $TIMEOUT_CMD $EXTENDED_TIMEOUT claude -p "$(cat "$SCRIPT_DIR/prompt.md")" \
         --output-format json \
         --allowedTools "Bash,Read,Edit,Write,Glob,Grep,Skill" \
         --no-session-persistence \

@@ -17,6 +17,13 @@ if ! command -v jq &> /dev/null; then
   MISSING+=("jq")
 fi
 
+# Check for timeout command (GNU coreutils)
+# On macOS with Homebrew coreutils, it's called gtimeout
+# On Linux, it's timeout
+if ! command -v timeout &> /dev/null && ! command -v gtimeout &> /dev/null; then
+  MISSING+=("coreutils")
+fi
+
 # Output results
 if [ ${#MISSING[@]} -eq 0 ]; then
   # All dependencies present

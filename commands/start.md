@@ -31,7 +31,9 @@ If dependencies are missing, use AskUserQuestion to ask:
 If user approves automatic install:
 - For claude CLI: Explain that the `claude` command comes with Claude Code and should already be available. If not found, the user may need to reinstall Claude Code or add it to their PATH.
 - For jq on macOS: `brew install jq`
-- For jq on Linux: Show instructions for apt/yum
+- For jq on Linux: Show instructions for apt/yum (e.g., `sudo apt-get install jq` or `sudo yum install jq`)
+- For coreutils on macOS: `brew install coreutils` (provides gtimeout command for iteration timeouts)
+- For coreutils on Linux: Usually pre-installed; if missing: `sudo apt-get install coreutils` or `sudo yum install coreutils`
 
 If user declines or install fails, show manual installation instructions and exit.
 
