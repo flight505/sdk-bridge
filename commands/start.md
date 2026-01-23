@@ -90,17 +90,24 @@ Question 1: "Max iterations before stopping?"
 - Default value: "10"
 - Text field for number
 
-Question 2: "Execution mode?"
+Question 2: "Iteration timeout (minutes per story)?"
+- Options:
+  - "5 minutes - Simple stories"
+  - "10 minutes - Standard stories"
+  - "15 minutes - Complex stories (recommended)"
+  - "20 minutes - Large refactors"
+
+Question 3: "Execution mode?"
 - Options: "Foreground (see live output)" / "Background (continue working)"
 
-Create config file:
+Convert timeout to seconds and create config file:
 ```yaml
 ---
-max_iterations: [user's answer]
-iteration_timeout: 900
+max_iterations: [user's answer from Q1]
+iteration_timeout: [user's answer from Q2 converted to seconds: 5min=300, 10min=600, 15min=900, 20min=1200]
 editor_command: "open"
 branch_prefix: "sdk-bridge"
-execution_mode: [foreground|background]
+execution_mode: [user's answer from Q3: foreground|background]
 ---
 
 # SDK Bridge Configuration
