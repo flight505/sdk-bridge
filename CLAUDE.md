@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Version 4.2.1** | Last Updated: 2026-01-23
+**Version 4.3.0** | Last Updated: 2026-01-23
 
 Developer instructions for working with the SDK Bridge plugin for Claude Code CLI.
 
