@@ -56,18 +56,14 @@ This makes the PRD generator and converter use Opus for superior reasoning. The 
 
 **Checkpoint 2: Project Input**
 
-Use AskUserQuestion to collect project description:
+Ask the user directly for their project description:
 
-Question: "What would you like to build? You can describe it directly or provide a file path."
-- Header: "Project"
-- multiSelect: false
-- Options:
-  - Label: "Type description" | Description: "Describe your project in the input field below"
-  - Label: "Provide file path" | Description: "Paste a path like ~/docs/spec.md or ./tasks/plan.md"
+"What would you like to build? Describe your project or provide a file path to an existing spec (e.g., ~/docs/spec.md or ./tasks/plan.md)."
 
-**After receiving answer:**
-- The user's response will be in the "Other" field (free text) or they selected one of the options
-- Store the response in a variable called `user_input`
+Then wait for the user's response in the chat.
+
+**After receiving response:**
+- Store the user's message content in variable `user_input`
 - Check if `user_input` looks like a file path:
   - Starts with `~/`, `./`, `/`, or `../`
   - OR ends with common extensions: `.md`, `.txt`, `.pdf`
@@ -78,7 +74,7 @@ Question: "What would you like to build? You can describe it directly or provide
   - If file doesn't exist: Show error and ask user to provide the description directly
 - If it's not a file path:
   - Use `user_input` directly as `project_input`
-- If the input seems insufficient (less than 20 words and no file read), ask follow-up clarifying questions
+- If the input seems insufficient (less than 20 words and no file read), ask follow-up clarifying questions via normal conversation
 - Proceed to Checkpoint 3
 
 **Checkpoint 3: Generate PRD**
