@@ -56,24 +56,20 @@ This makes the PRD generator and converter use Opus for superior reasoning. The 
 
 **Checkpoint 2: Project Input**
 
-Display to user:
-"📝 **Step 2/7: Describe Your Project**
+Use AskUserQuestion to collect project description:
 
-Please provide your project description. You can:
-- Type your description directly
-- Reference files with @filename (e.g., @docs/spec.md)
-- Use file paths (e.g., ~/tasks/plan.md)
-- Combine description + file references
+Question: "What would you like to build? (Press Ctrl+G to open your editor for longer descriptions or @file references)"
+- Header: "Project"
+- multiSelect: false
+- Options:
+  - Label: "Open editor (Ctrl+G recommended)" | Description: "Use your default editor to write/paste description with @file references"
 
-*What would you like to build?*"
-
-Wait for user's next message.
-
-**After receiving user message:**
-- Extract any @file references and read those files using the Read tool
-- Capture description text from the message
-- Combine file contents and description into a single project_input variable
-- If the input seems insufficient, ask clarifying questions before proceeding
+**After receiving answer:**
+- The user's response will be in the "Other" field (free text) or they selected the editor option
+- Store the response in a variable called `project_input`
+- If the input contains @file references (e.g., @docs/spec.md), extract and read those files using Read tool
+- Combine file contents with the description text into final `project_input`
+- If the input seems insufficient (less than 20 words and no files), ask follow-up clarifying questions
 - Proceed to Checkpoint 3
 
 **Checkpoint 3: Generate PRD**
