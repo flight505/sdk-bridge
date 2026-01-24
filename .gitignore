@@ -36,3 +36,4 @@ __pycache__/
 # Generated code from autonomous runs
 flight_marketplace/
 run_dev_server.py
+.worktrees/
