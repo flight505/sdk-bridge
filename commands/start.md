@@ -58,18 +58,27 @@ This makes the PRD generator and converter use Opus for superior reasoning. The 
 
 Use AskUserQuestion to collect project description:
 
-Question: "What would you like to build? (Press Ctrl+G to open your editor for longer descriptions or @file references)"
+Question: "What would you like to build? You can describe it directly or provide a file path."
 - Header: "Project"
 - multiSelect: false
 - Options:
-  - Label: "Open editor (Ctrl+G recommended)" | Description: "Use your default editor to write/paste description with @file references"
+  - Label: "Type description" | Description: "Describe your project in the input field below"
+  - Label: "Provide file path" | Description: "Paste a path like ~/docs/spec.md or ./tasks/plan.md"
 
 **After receiving answer:**
-- The user's response will be in the "Other" field (free text) or they selected the editor option
-- Store the response in a variable called `project_input`
-- If the input contains @file references (e.g., @docs/spec.md), extract and read those files using Read tool
-- Combine file contents with the description text into final `project_input`
-- If the input seems insufficient (less than 20 words and no files), ask follow-up clarifying questions
+- The user's response will be in the "Other" field (free text) or they selected one of the options
+- Store the response in a variable called `user_input`
+- Check if `user_input` looks like a file path:
+  - Starts with `~/`, `./`, `/`, or `../`
+  - OR ends with common extensions: `.md`, `.txt`, `.pdf`
+- If it looks like a file path:
+  - Expand `~` to user's home directory if needed
+  - Use Read tool to read the file
+  - If file exists: Store content as `project_input`
+  - If file doesn't exist: Show error and ask user to provide the description directly
+- If it's not a file path:
+  - Use `user_input` directly as `project_input`
+- If the input seems insufficient (less than 20 words and no file read), ask follow-up clarifying questions
 - Proceed to Checkpoint 3
 
 **Checkpoint 3: Generate PRD**
