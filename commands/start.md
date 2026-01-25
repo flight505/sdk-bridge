@@ -70,11 +70,45 @@ Then wait for the user's response in the chat.
 - If it looks like a file path:
   - Expand `~` to user's home directory if needed
   - Use Read tool to read the file
-  - If file exists: Store content as `project_input`
+  - If file exists: Store content as `project_input` and proceed to Checkpoint 3
   - If file doesn't exist: Show error and ask user to provide the description directly
 - If it's not a file path:
   - Use `user_input` directly as `project_input`
-- If the input seems insufficient (less than 20 words and no file read), ask follow-up clarifying questions via normal conversation
+
+**If input insufficient (less than 20 words and no file read):**
+
+Conduct a smart interview to gather REQUIRED information:
+
+1. **Project Type (REQUIRED)**: Ask "What type of project is this?"
+   - Examples: web app, API, CLI tool, mobile app, library, script, etc.
+
+2. **Main Functionality (REQUIRED)**: Ask "What's the core functionality or purpose?"
+   - What problem does it solve?
+   - What should users be able to do?
+
+3. **Technical Preferences (optional)**: Ask if relevant:
+   - "Any specific language, framework, or stack preferences?"
+   - "Any existing systems this needs to integrate with?"
+
+4. **Scale/Complexity (optional)**: Ask if needed for context:
+   - "Is this a small feature, medium project, or large system?"
+
+**When to proceed:**
+- Once you have clear answers to both REQUIRED items (project type + main functionality), proceed automatically to Checkpoint 3
+- No need to ask "do you have enough?" - use your judgment
+- If user provides very detailed initial input (>50 words), skip interview entirely
+
+**Example interview flow:**
+```
+User: "Build an auth system"  [insufficient]
+You: "What type of project is this? (web app, API, mobile app, etc.)"
+User: "It's a REST API"
+You: "What's the core functionality? What should users be able to do with authentication?"
+User: "User registration, login with email/password, JWT tokens"
+[You now have: type=API, functionality=auth with registration/login/JWT]
+→ Proceed to Checkpoint 3 automatically
+```
+
 - Proceed to Checkpoint 3
 
 **Checkpoint 3: Generate PRD**
@@ -101,13 +135,38 @@ Question: "Review the PRD in `tasks/prd-[feature-name].md`. Ready to proceed?"
 - multiSelect: false
 - Options:
   - Label: "Approved - convert to JSON" | Description: "PRD looks good, proceed to execution format"
-  - Label: "Need edits - wait" | Description: "Let me edit the file first, then ask again"
+  - Label: "Suggest improvements" | Description: "Have Claude review and suggest enhancements"
+  - Label: "Need edits - I'll edit" | Description: "Let me edit the file manually, then ask again"
   - Label: "Start over" | Description: "Regenerate PRD from scratch"
 
 **After collecting answer:**
-- If "Need edits - wait": Pause and display "Make your edits to tasks/prd-[feature-name].md and let me know when ready." Wait for user confirmation, then ask the same question again.
-- If "Start over": Return to Checkpoint 2
-- If "Approved - convert to JSON": Proceed to Checkpoint 5
+
+- **If "Approved - convert to JSON"**: Proceed to Checkpoint 5
+
+- **If "Suggest improvements"**:
+  1. Read the PRD file with Read tool
+  2. Analyze the PRD for potential improvements:
+     - Missing edge cases or error scenarios
+     - Additional features that complement the core functionality
+     - Acceptance criteria that could be more specific or testable
+     - Dependencies between stories that weren't captured
+     - Security, performance, or accessibility considerations
+  3. Present findings to user conversationally:
+     - "I've reviewed the PRD. Here are some suggestions:"
+     - List 3-5 specific improvements with brief rationale
+     - Ask conversationally: "Would you like me to update the PRD with these improvements?"
+  4. Wait for user response in chat
+  5. If user approves suggestions:
+     - Update the PRD file with improvements using Edit tool
+     - Display: "PRD updated with improvements"
+  6. **Return to the beginning of Checkpoint 4**: Use AskUserQuestion again with the same 4 options (this creates a loop - user can approve improved PRD, request more improvements, manually edit, or start over)
+
+- **If "Need edits - I'll edit"**:
+  1. Pause and display "Make your edits to tasks/prd-[feature-name].md and let me know when ready."
+  2. Wait for user confirmation in chat
+  3. **Return to the beginning of Checkpoint 4**: Use AskUserQuestion again with the same 4 options
+
+- **If "Start over"**: Return to Checkpoint 2
 
 **Checkpoint 5: Convert to JSON**
 
