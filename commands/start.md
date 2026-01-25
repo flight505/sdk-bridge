@@ -180,29 +180,60 @@ The skill will:
 - Validate structure (IDs, priorities, acceptance criteria)
 - Save to `prd.json` in project root
 
+**After conversion, read prd.json and display summary:**
+- Count stories in `userStories` array
+- Count total acceptance criteria across all stories
+- Calculate average criteria per story
+- Display: "✓ PRD converted: [story_count] stories, [total_criteria] criteria (avg [avg_criteria]/story)"
+
 **Checkpoint 6: Execution Settings**
 
 Create `.claude/sdk-bridge.local.md` configuration if it doesn't exist.
 
-Use AskUserQuestion to collect settings (all 3 questions in one call for tabbed UI):
+**First, analyze prd.json to calculate smart defaults:**
 
-Question 1: "How many iterations before stopping?"
+1. Read `prd.json` and extract:
+   - `story_count` = number of stories in `userStories` array
+   - `total_criteria` = sum of all `acceptanceCriteria` arrays across stories
+   - `avg_criteria` = total_criteria / story_count (rounded to 1 decimal)
+
+2. Calculate iteration options:
+   - `recommended` = ceil(story_count × 2.5) — standard buffer for retries
+   - `comfortable` = ceil(story_count × 3.5) — extra buffer for complex work
+   - `conservative` = ceil(story_count × 5) — maximum safety margin
+   - `minimum` = story_count — absolute minimum (1 per story, no retries)
+
+3. Calculate timeout options based on avg_criteria (complexity proxy):
+   - If avg_criteria ≤ 2: `base_timeout` = 30 min (simple stories)
+   - If avg_criteria ≤ 4: `base_timeout` = 45 min (standard stories)
+   - If avg_criteria ≤ 6: `base_timeout` = 60 min (complex stories)
+   - If avg_criteria > 6: `base_timeout` = 90 min (very complex stories)
+
+   Then calculate options:
+   - `quick` = base_timeout (may timeout on harder stories)
+   - `recommended` = base_timeout + 15 min (buffer for exploration)
+   - `generous` = base_timeout + 30 min (extra time for difficult work)
+   - `maximum` = 120 min (2 hours, prevents runaway)
+
+Use AskUserQuestion to collect settings (all 4 questions in one call for tabbed UI):
+
+Question 1: "You have [story_count] stories. How many iterations?"
 - Header: "Iterations"
 - multiSelect: false
 - Options:
-  - Label: "5 iterations" | Description: "Quick experiments or small features"
-  - Label: "10 iterations" | Description: "Standard projects (recommended)"
-  - Label: "15 iterations" | Description: "Complex projects with many stories"
-  - Label: "20 iterations" | Description: "Large refactors or extensive work"
+  - Label: "[recommended] iterations" | Description: "Recommended (2.5× stories) - handles typical retries"
+  - Label: "[comfortable] iterations" | Description: "Comfortable (3.5× stories) - extra buffer for complex work"
+  - Label: "[conservative] iterations" | Description: "Conservative (5× stories) - maximum safety margin"
+  - Label: "[minimum] iterations" | Description: "Minimum (1× stories) - no retry buffer, optimistic"
 
-Question 2: "How long should each story iteration be allowed to run?"
+Question 2: "Stories avg [avg_criteria] criteria each. Timeout per iteration?"
 - Header: "Timeout"
 - multiSelect: false
 - Options:
-  - Label: "10 minutes" | Description: "Quick fixes or simple additions"
-  - Label: "20 minutes" | Description: "Standard complexity stories"
-  - Label: "30 minutes" | Description: "Complex integrations, full-stack work (recommended)"
-  - Label: "60 minutes" | Description: "Extremely complex - major refactors, extensive exploration"
+  - Label: "[quick] minutes" | Description: "Quick ([base_timeout] base) - may timeout on harder stories"
+  - Label: "[recommended] minutes" | Description: "Recommended ([base_timeout]+15) - buffer for exploration"
+  - Label: "[generous] minutes" | Description: "Generous ([base_timeout]+30) - extra time for difficult work"
+  - Label: "120 minutes" | Description: "Maximum (2 hours) - prevents runaway"
 
 Question 3: "How do you want to run SDK Bridge?"
 - Header: "Mode"
@@ -221,17 +252,17 @@ Question 4: "Which model should implement the stories?"
 **After collecting answers, parse values:**
 
 For iterations (Question 1):
-- "5 iterations" → 5
-- "10 iterations" → 10
-- "15 iterations" → 15
-- "20 iterations" → 20
+- "[recommended] iterations" → use the calculated `recommended` value
+- "[comfortable] iterations" → use the calculated `comfortable` value
+- "[conservative] iterations" → use the calculated `conservative` value
+- "[minimum] iterations" → use the calculated `minimum` value
 - Custom input (via "Other") → parse number from string
 
 For timeout (Question 2):
-- "10 minutes" → 600
-- "20 minutes" → 1200
-- "30 minutes" → 1800
-- "60 minutes" → 3600
+- "[quick] minutes" → quick × 60 (in seconds)
+- "[recommended] minutes" → recommended × 60 (in seconds)
+- "[generous] minutes" → generous × 60 (in seconds)
+- "120 minutes" → 7200
 - Custom input (via "Other") → multiply number by 60
 
 For mode (Question 3):
@@ -258,11 +289,11 @@ branch_prefix: "sdk-bridge"
 Edit these settings as needed and run `/sdk-bridge:start` again.
 ```
 
-Example:
+Example (8 stories, avg 4 criteria each → standard complexity):
 ```yaml
 ---
-max_iterations: 10
-iteration_timeout: 900
+max_iterations: 20    # ceil(8 × 2.5) = 20 recommended
+iteration_timeout: 3600  # 60 min (45 base + 15 buffer)
 execution_mode: foreground
 execution_model: sonnet
 editor_command: "open"

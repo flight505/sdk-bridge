@@ -208,14 +208,29 @@ git add --chmod=+x scripts/*.sh
 
 ```yaml
 ---
-max_iterations: 10           # Stop after N iterations
-iteration_timeout: 900       # Timeout per iteration (seconds)
+max_iterations: 25           # Stop after N iterations (1 story ≈ 1-3 iterations)
+iteration_timeout: 3600      # Timeout per iteration (seconds) - 60 min default
 execution_mode: "foreground" # "foreground" or "background"
 execution_model: "sonnet"    # "sonnet" or "opus" for story implementation
 editor_command: "code"       # Command to open files
 branch_prefix: "sdk-bridge"  # Git branch prefix
 ---
 ```
+
+**Iteration Guidelines:**
+- Each story typically consumes 1-3 iterations
+- Simple stories: 1 iteration (already-implemented check passes)
+- Standard stories: 1-2 iterations (implement + verify)
+- Complex stories: 2-3 iterations (may need retries/fixes)
+- Formula: `stories × 2.5 = recommended iterations`
+
+**Timeout Guidelines (based on avg acceptance criteria per story):**
+| Avg Criteria | Complexity | Base Timeout | Recommended |
+|--------------|------------|--------------|-------------|
+| 1-2 | Simple | 30 min | 45 min |
+| 3-4 | Standard | 45 min | 60 min |
+| 5-6 | Complex | 60 min | 75 min |
+| 7+ | Very Complex | 90 min | 105 min |
 
 **Model Selection:**
 - `execution_model`: Which Claude model implements the stories (sonnet or opus)
