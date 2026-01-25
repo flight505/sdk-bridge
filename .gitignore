@@ -9,11 +9,11 @@ __pycache__/
 *.swo
 *~
 
-# Diagram generation artifacts
+# Diagram generation artifacts (keep only final versions)
 hero-original.png
 hero.png
-sdk-bridge-architecture_review_log.json
-sdk-bridge-architecture_v1.png
+assets/*_v*.png
+assets/*_review_log.json
 sdk-bridge-wizard-flow_v*.png
 sdk-bridge-wizard-flow_review_log.json
 
