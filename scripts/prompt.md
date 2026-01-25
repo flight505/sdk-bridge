@@ -115,16 +115,20 @@ Only update AGENTS.md if you have **genuinely reusable knowledge** that would he
 - Keep changes focused and minimal
 - Follow existing code patterns
 
-## Browser Testing (Required for Frontend Stories)
+## Verification (Required for All Stories)
 
-For any story that changes UI, you MUST verify it works in the browser:
+**Backend stories:**
+- Run automated tests (e.g., `pytest`, `npm test`, `go test`)
+- Verify API endpoints with curl or API test suite
+- Run verification commands specified in acceptance criteria
 
-1. Load the `dev-browser` skill
-2. Navigate to the relevant page
-3. Verify the UI changes work as expected
-4. Take a screenshot if helpful for the progress log
+**Frontend stories:**
+- Run build process to catch compilation errors (e.g., `npm run build`, `tsc`)
+- Run linters and type checkers (e.g., `npm run lint`, `tsc --noEmit`)
+- Run any automated UI/integration tests if available
+- **Manual browser testing:** After SDK Bridge completes, manually verify UI changes in browser
 
-A frontend story is NOT complete until browser verification passes.
+**Note:** Browser automation (Claude in Chrome) is not available in headless mode. UI changes should be verified through build checks, linters, and any automated tests during autonomous execution. Visual/interactive testing must be done manually after completion.
 
 ## Stop Condition
 
