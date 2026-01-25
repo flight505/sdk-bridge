@@ -2,7 +2,7 @@
 
 ![SDK Bridge Hero](./assets/sdk-bridge-hero.jpg)
 
-[![Version](https://img.shields.io/badge/version-4.3.0-blue.svg)](https://github.com/flight505/sdk-bridge)
+[![Version](https://img.shields.io/badge/version-4.6.0-blue.svg)](https://github.com/flight505/sdk-bridge)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)](https://github.com/anthropics/claude-code)
 
