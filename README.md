@@ -16,7 +16,7 @@ Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
 
 ## Architecture
 
-![SDK Bridge Architecture](./assets/sdk-bridge-architecture.png)
+![SDK Bridge Architecture](./assets/sdk-bridge-architecture.png?v=4.6.0)
 
 SDK Bridge uses a **bash orchestration loop** that spawns fresh Claude CLI instances for each iteration. State persists via:
 - **prd.json** - Source of truth for story completion status
@@ -29,7 +29,7 @@ Each iteration is a fresh Claude instance with clean context—no context pollut
 
 ## Interactive Workflow
 
-![SDK Bridge Wizard](./assets/sdk-bridge-wizard.png)
+![SDK Bridge Wizard](./assets/sdk-bridge-wizard.png?v=4.6.0)
 
 SDK Bridge guides you through a **7-checkpoint interactive workflow**:
 
