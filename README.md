@@ -18,25 +18,62 @@ Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
 
 ![SDK Bridge Architecture](./assets/sdk-bridge-architecture.png)
 
-SDK Bridge uses a bash orchestration loop that spawns fresh Claude CLI instances for each iteration, with state persistence via JSON files.
+SDK Bridge uses a **bash orchestration loop** that spawns fresh Claude CLI instances for each iteration. State persists via:
+- **prd.json** - Source of truth for story completion status
+- **progress.txt** - Append-only log of learnings and patterns
+- **Git commits** - Code changes from previous iterations
+
+Each iteration is a fresh Claude instance with clean context—no context pollution. The bash coordinator reads state files, spawns a new Claude CLI process, and continues until all stories pass or max iterations reached.
 
 ---
 
-## What It Does
+## Interactive Workflow
 
-SDK Bridge guides you through an interactive workflow:
+![SDK Bridge Wizard](./assets/sdk-bridge-wizard.png)
 
-1. **Describe your feature** - Type a description or reference a file with `@file`
-2. **Generate PRD** - Answers clarifying questions, creates detailed requirements document
-3. **Review & edit** - Opens PRD in your editor for refinement
-4. **Convert to JSON** - Transforms PRD into executable task list
-5. **Configure & run** - Sets max iterations and execution mode
-6. **Autonomous execution** - Fresh Claude agents run in a loop, implementing one story at a time until complete
+SDK Bridge guides you through a **7-checkpoint interactive workflow**:
 
-Each iteration is a **fresh Claude instance** with clean context. Memory persists via:
+### Checkpoint 1: Dependency Check
+Verifies `claude` CLI, `jq`, and `coreutils` are installed. Offers automatic installation if missing.
+
+### Checkpoint 2: Project Input
+Describe your project or provide a file path. If input is insufficient (<20 words), conducts a smart interview asking for:
+- Project type (REQUIRED)
+- Core functionality (REQUIRED)
+- Tech stack, scale (optional)
+
+Auto-proceeds when both required items answered.
+
+### Checkpoint 3: Generate PRD
+Invokes `prd-generator` skill to create a structured PRD with:
+- 3-5 clarifying questions
+- User stories with verifiable acceptance criteria
+- Dependency tracking
+
+### Checkpoint 4: Review PRD
+Opens PRD in your editor. Four options:
+- **Approve** - Proceed to JSON conversion
+- **Suggest improvements** - Claude analyzes and proposes enhancements (iterative loop)
+- **Need edits** - Manually edit and re-review
+- **Start over** - Regenerate from scratch
+
+### Checkpoint 5: Convert to JSON
+Invokes `prd-converter` skill to transform markdown PRD into executable `prd.json` format with validation.
+
+### Checkpoint 6: Execution Settings
+Configure via interactive questions:
+- Max iterations (5/10/15/20)
+- Timeout per iteration (10/20/30/60 minutes)
+- Mode (Foreground/Background)
+- Model (Sonnet/Opus)
+
+### Checkpoint 7: Launch
+Starts the autonomous orchestration loop based on your settings.
+
+**Memory between iterations:**
 - Git history (commits from previous iterations)
 - `progress.txt` (learnings and discovered patterns)
-- `prd.json` (which stories are done)
+- `prd.json` (which stories are complete)
 
 ---
 
@@ -292,9 +329,12 @@ SDK Bridge updates `AGENTS.md` files with discovered patterns. These are automat
 
 The `## Codebase Patterns` section at the top of `progress.txt` consolidates the most important learnings. Future iterations read this first before starting work.
 
-### 5. Browser Verification
+### 5. Verification Commands
 
-For UI changes, PRDs should include "Verify in browser using dev-browser skill" in acceptance criteria. SDK Bridge will use Claude's browser automation to confirm visual changes work.
+For all changes, PRDs should include specific verification commands in acceptance criteria:
+- Backend: `curl` commands, API tests, `pytest`
+- Frontend: Build checks (`npm run build`), linters (`npm run lint`), automated UI tests
+- Manual browser testing should be done after SDK Bridge completes (browser automation not available in headless mode)
 
 ---
 
