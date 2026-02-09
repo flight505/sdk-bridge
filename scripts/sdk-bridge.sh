@@ -156,11 +156,27 @@ fi
 # Determine execution model (sonnet or opus)
 EXECUTION_MODEL="sonnet"
 if [ -f "$CONFIG_FILE" ]; then
-  MODEL_FROM_CONFIG=$(grep -A 10 "^---$" "$CONFIG_FILE" | grep "execution_model:" | sed 's/.*: *//' || echo "")
+  MODEL_FROM_CONFIG=$(grep -A 10 "^---$" "$CONFIG_FILE" | grep "execution_model:" | sed 's/.*: *//' | tr -d '"' || echo "")
   if [ -n "$MODEL_FROM_CONFIG" ]; then
     EXECUTION_MODEL=$MODEL_FROM_CONFIG
     echo "[INIT] Execution model: $EXECUTION_MODEL" >&2
   fi
+fi
+
+# Determine effort level for Opus 4.6 (low/medium/high)
+EFFORT_LEVEL=""
+if [ -f "$CONFIG_FILE" ]; then
+  EFFORT_FROM_CONFIG=$(grep -A 10 "^---$" "$CONFIG_FILE" | grep "effort_level:" | sed 's/.*: *//' | tr -d '"' || echo "")
+  if [ -n "$EFFORT_FROM_CONFIG" ]; then
+    EFFORT_LEVEL=$EFFORT_FROM_CONFIG
+    echo "[INIT] Effort level: $EFFORT_LEVEL" >&2
+  fi
+fi
+
+# Export effort level as env var for Claude CLI (Opus 4.6 adaptive reasoning)
+if [ -n "$EFFORT_LEVEL" ] && [ "$EXECUTION_MODEL" = "opus" ]; then
+  export CLAUDE_CODE_EFFORT_LEVEL="$EFFORT_LEVEL"
+  echo "[INIT] CLAUDE_CODE_EFFORT_LEVEL=$EFFORT_LEVEL (Opus 4.6 adaptive reasoning)" >&2
 fi
 
 # Archive previous run if branch changed
@@ -245,6 +261,7 @@ echo $$ > "$INSTANCE_PID_FILE"
 
 echo "Starting SDK Bridge - Max iterations: $MAX_ITERATIONS"
 echo "Branch: $BRANCH_NAME"
+echo "Model: $EXECUTION_MODEL$([ -n "$EFFORT_LEVEL" ] && echo " (effort: $EFFORT_LEVEL)")"
 echo "PID: $$"
 echo "Timeout: ${ITERATION_TIMEOUT}s per iteration"
 

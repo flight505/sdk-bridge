@@ -52,7 +52,9 @@ For best results, configure Opus for PRD generation (Steps 3 & 5 use subagents):
 export CLAUDE_CODE_SUBAGENT_MODEL=opus
 ```
 
-This makes the PRD generator and converter use Opus for superior reasoning. The planning phase only runs once, so the cost is minimal. Restart your terminal after adding this.
+This makes the PRD generator and converter use Opus 4.6 (the latest, with adaptive reasoning) for superior planning. The planning phase only runs once, so the cost is minimal. Restart your terminal after adding this.
+
+**Note on /fast mode:** If you're using Claude Code interactively (not through SDK Bridge's autonomous loop), you can toggle `/fast` for 2.5x faster Opus 4.6 output. Fast mode is included in Max subscriptions at no extra cost. SDK Bridge's autonomous loop uses headless mode where effort level (configured below) controls the speed/quality tradeoff instead.
 
 **Checkpoint 2: Project Input**
 
@@ -242,12 +244,13 @@ Question 3: "How do you want to run SDK Bridge?"
   - Label: "Foreground" | Description: "See live output as Claude works (blocks terminal)"
   - Label: "Background" | Description: "Continue working while it runs (check .claude/sdk-bridge.log)"
 
-Question 4: "Which model should implement the stories?"
+Question 4: "Which model and effort level for story implementation?"
 - Header: "Model"
 - multiSelect: false
 - Options:
-  - Label: "Sonnet" | Description: "Fast and efficient - good for most tasks (recommended)"
-  - Label: "Opus" | Description: "Best quality - fewer bugs, better at complex code (slower, costs more for API users)"
+  - Label: "Sonnet 4.5" | Description: "Fast and efficient - good for most tasks (recommended)"
+  - Label: "Opus 4.6 (high effort)" | Description: "Best quality - adaptive reasoning, #1 SWE-bench, 128K output (default effort)"
+  - Label: "Opus 4.6 (medium effort)" | Description: "Opus quality at 76% fewer tokens - matches Sonnet speed, better reasoning"
 
 **After collecting answers, parse values:**
 
@@ -270,8 +273,10 @@ For mode (Question 3):
 - "Background" → background
 
 For model (Question 4):
-- "Sonnet" → sonnet
-- "Opus" → opus
+- "Sonnet 4.5" → execution_model: sonnet, effort_level: (not set)
+- "Opus 4.6 (high effort)" → execution_model: opus, effort_level: high
+- "Opus 4.6 (medium effort)" → execution_model: opus, effort_level: medium
+- Custom input (via "Other") → parse model and effort from string
 
 Create config file with parsed values:
 ```yaml
@@ -280,6 +285,7 @@ max_iterations: [parsed number from Q1]
 iteration_timeout: [parsed seconds from Q2]
 execution_mode: [parsed mode from Q3]
 execution_model: [parsed model from Q4]
+effort_level: [parsed effort from Q4, omit for Sonnet]
 editor_command: "open"
 branch_prefix: "sdk-bridge"
 ---
@@ -295,7 +301,8 @@ Example (8 stories, avg 4 criteria each → standard complexity):
 max_iterations: 20    # ceil(8 × 2.5) = 20 recommended
 iteration_timeout: 3600  # 60 min (45 base + 15 buffer)
 execution_mode: foreground
-execution_model: sonnet
+execution_model: opus
+effort_level: high
 editor_command: "open"
 branch_prefix: "sdk-bridge"
 ---

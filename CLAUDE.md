@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Version 4.3.0** | Last Updated: 2026-01-23
+**Version 4.8.0** | Last Updated: 2026-02-08
 
 Developer instructions for working with the SDK Bridge plugin for Claude Code CLI.
 
@@ -211,7 +211,8 @@ git add --chmod=+x scripts/*.sh
 max_iterations: 25           # Stop after N iterations (1 story ≈ 1-3 iterations)
 iteration_timeout: 3600      # Timeout per iteration (seconds) - 60 min default
 execution_mode: "foreground" # "foreground" or "background"
-execution_model: "sonnet"    # "sonnet" or "opus" for story implementation
+execution_model: "opus"      # "sonnet" or "opus" for story implementation
+effort_level: "high"         # "low", "medium", or "high" (Opus 4.6 only, default: high)
 editor_command: "code"       # Command to open files
 branch_prefix: "sdk-bridge"  # Git branch prefix
 ---
@@ -234,8 +235,13 @@ branch_prefix: "sdk-bridge"  # Git branch prefix
 
 **Model Selection:**
 - `execution_model`: Which Claude model implements the stories (sonnet or opus)
+- `effort_level`: Controls reasoning depth for Opus 4.6 (low/medium/high). Ignored for Sonnet.
+  - `high` (default): Deep reasoning, best quality, highest cost
+  - `medium`: Matches Sonnet-level SWE-bench at 76% fewer tokens — best cost/quality balance
+  - `low`: Fastest, minimal reasoning, cheapest
 - Planning (PRD generation) uses `CLAUDE_CODE_SUBAGENT_MODEL` env var (recommend: opus)
-- Implementation uses `execution_model` config (default: sonnet)
+- Implementation uses `execution_model` config (default: opus)
+- `/fast` mode (2.5x speed, included in Max) is for interactive sessions only; the autonomous loop uses effort_level instead
 
 ---
 

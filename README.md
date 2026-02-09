@@ -2,7 +2,7 @@
 
 ![SDK Bridge Hero](./assets/sdk-bridge-hero.jpg)
 
-[![Version](https://img.shields.io/badge/version-4.6.0-blue.svg)](https://github.com/flight505/sdk-bridge)
+[![Version](https://img.shields.io/badge/version-4.8.0-blue.svg)](https://github.com/flight505/sdk-bridge)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)](https://github.com/anthropics/claude-code)
 
@@ -65,7 +65,7 @@ Configure via interactive questions:
 - Max iterations (5/10/15/20)
 - Timeout per iteration (10/20/30/60 minutes)
 - Mode (Foreground/Background)
-- Model (Sonnet/Opus)
+- Model and effort level (Sonnet 4.5 / Opus 4.6 with effort control)
 
 ### Checkpoint 7: Launch
 Starts the autonomous orchestration loop based on your settings.
@@ -201,7 +201,8 @@ After first run, edit `.claude/sdk-bridge.local.md`:
 max_iterations: 10           # Stop after N iterations
 iteration_timeout: 900       # Timeout per iteration (seconds, default: 900/15min)
 execution_mode: "foreground" # "foreground" or "background"
-execution_model: "sonnet"    # "sonnet" or "opus"
+execution_model: "opus"      # "sonnet" or "opus"
+effort_level: "high"         # "low", "medium", or "high" (Opus 4.6 only)
 editor_command: "code"       # Command to open files
 branch_prefix: "sdk-bridge"  # Git branch prefix
 ---
@@ -211,15 +212,20 @@ branch_prefix: "sdk-bridge"  # Git branch prefix
 - `max_iterations`: Maximum number of Claude iterations before stopping
 - `iteration_timeout`: Timeout in seconds for each iteration (default: 900 = 15 minutes)
 - `execution_mode`: `foreground` (interactive) or `background` (autonomous)
-- `execution_model`: `sonnet` (fast, default) or `opus` (best quality, slower)
+- `execution_model`: `sonnet` (Sonnet 4.5, fast) or `opus` (Opus 4.6, best quality)
+- `effort_level`: Controls Opus 4.6 reasoning depth — `high` (default, deepest), `medium` (balanced), `low` (fastest). Ignored for Sonnet.
 - `editor_command`: Your preferred editor (`code`, `cursor`, `vim`, etc.)
 - `branch_prefix`: Git branch prefix for SDK Bridge branches
 
 **Model Selection:**
 - **Planning phase** (PRD generation): Set `export CLAUDE_CODE_SUBAGENT_MODEL=opus` for best results
-- **Implementation phase** (story execution): Choose `sonnet` or `opus` via wizard or config
-- Sonnet: Fast and efficient, good for most tasks
-- Opus: Best code quality, fewer bugs, better at complex reasoning (recommended for Max subscribers)
+- **Implementation phase** (story execution): Choose model and effort level via wizard or config
+- **Sonnet 4.5**: Fast and efficient, good for most tasks
+- **Opus 4.6 (high effort)**: Best code quality — #1 on SWE-bench (80.8%), adaptive reasoning, 128K output tokens
+- **Opus 4.6 (medium effort)**: Matches Sonnet's SWE-bench performance while using 76% fewer output tokens — best cost/quality balance
+- **Opus 4.6 (low effort)**: Fastest Opus mode, minimal reasoning, cheapest
+
+**Fast mode (/fast):** For interactive Claude Code sessions, toggle `/fast` for 2.5x faster Opus 4.6 output. Included in Max subscriptions at no extra cost. Not applicable to SDK Bridge's autonomous loop (use effort_level instead).
 
 ---
 
