@@ -225,8 +225,6 @@ branch_prefix: "sdk-bridge"  # Git branch prefix
 - **Opus 4.6 (medium effort)**: Matches Sonnet's SWE-bench performance while using 76% fewer output tokens — best cost/quality balance
 - **Opus 4.6 (low effort)**: Fastest Opus mode, minimal reasoning, cheapest
 
-**Fast mode (/fast):** For interactive Claude Code sessions, toggle `/fast` for 2.5x faster Opus 4.6 output. Included in Max subscriptions at no extra cost. Not applicable to SDK Bridge's autonomous loop (use effort_level instead).
-
 ---
 
 ## Foreground vs Background

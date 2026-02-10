@@ -54,8 +54,6 @@ export CLAUDE_CODE_SUBAGENT_MODEL=opus
 
 This makes the PRD generator and converter use Opus 4.6 (the latest, with adaptive reasoning) for superior planning. The planning phase only runs once, so the cost is minimal. Restart your terminal after adding this.
 
-**Note on /fast mode:** If you're using Claude Code interactively (not through SDK Bridge's autonomous loop), you can toggle `/fast` for 2.5x faster Opus 4.6 output. Fast mode is included in Max subscriptions at no extra cost. SDK Bridge's autonomous loop uses headless mode where effort level (configured below) controls the speed/quality tradeoff instead.
-
 **Checkpoint 2: Project Input**
 
 Ask the user directly for their project description:

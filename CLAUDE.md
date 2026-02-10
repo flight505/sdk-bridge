@@ -241,7 +241,6 @@ branch_prefix: "sdk-bridge"  # Git branch prefix
   - `low`: Fastest, minimal reasoning, cheapest
 - Planning (PRD generation) uses `CLAUDE_CODE_SUBAGENT_MODEL` env var (recommend: opus)
 - Implementation uses `execution_model` config (default: opus)
-- `/fast` mode (2.5x speed, included in Max) is for interactive sessions only; the autonomous loop uses effort_level instead
 
 ---
 
