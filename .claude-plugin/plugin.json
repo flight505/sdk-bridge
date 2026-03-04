@@ -1,9 +1,10 @@
 {
   "name": "sdk-bridge",
-  "version": "4.8.1",
-  "description": "Interactive autonomous development assistant - generates PRDs, converts to execution format, and runs fresh Claude instances until complete.",
+  "version": "5.0.0",
+  "description": "PRD-driven autonomous development — generates PRDs, converts to execution format, runs fresh Claude instances with quality gates until complete. Two-stage review, TDD enforcement, failure categorization.",
   "author": {
     "name": "Jesper Vang",
+    "email": "jesper_vang@me.com",
     "url": "https://github.com/flight505"
   },
   "license": "MIT",
@@ -15,13 +16,23 @@
     "prd",
     "agent-loop",
     "long-running",
-    "interactive"
+    "interactive",
+    "tdd",
+    "code-review"
   ],
   "commands": [
     "./commands/start.md"
   ],
   "skills": [
     "./skills/prd-generator",
-    "./skills/prd-converter"
+    "./skills/prd-converter",
+    "./skills/failure-analyzer"
+  ],
+  "agents": [
+    "./agents/architect.md",
+    "./agents/implementer.md",
+    "./agents/reviewer.md",
+    "./agents/code-reviewer.md",
+    "./agents/merger.md"
   ]
 }

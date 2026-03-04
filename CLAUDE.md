@@ -1,8 +1,8 @@
 # CLAUDE.md
 
-**Version 4.8.0** | Last Updated: 2026-02-08
+**Version 5.0.0** | Last Updated: 2026-03-04
 
-Developer instructions for working with the SDK Bridge plugin for Claude Code CLI.
+Developer instructions for the SDK Bridge plugin for Claude Code CLI.
 
 ---
 
@@ -11,323 +11,199 @@ Developer instructions for working with the SDK Bridge plugin for Claude Code CL
 SDK Bridge is an **interactive autonomous development assistant** providing a single command (`/sdk-bridge:start`) that:
 1. Generates detailed PRDs with clarifying questions
 2. Converts to executable JSON format
-3. Runs fresh Claude agent loops until all work complete
+3. Runs fresh Claude agent loops with quality gates until all work is complete
 
-**Philosophy:** Radical simplicity. One command, interactive wizard, fresh Claude instances each iteration.
+**Philosophy:** Radical simplicity. One command, interactive wizard, fresh Claude instances each iteration. Quality enforced through TDD, two-stage review, and failure categorization.
+
+Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
 
 ---
 
 ## Architecture
 
-### Component Structure
-
 ```
 sdk-bridge/
-├── .claude-plugin/
-│   └── plugin.json          # Plugin manifest
+├── .claude-plugin/plugin.json        # Plugin manifest
+├── agents/                            # 5 subagents
+│   ├── architect.md                   # Read-only codebase explorer
+│   ├── implementer.md                 # Code a single story (TDD + verify)
+│   ├── reviewer.md                    # Spec compliance + validation (two-phase)
+│   ├── code-reviewer.md              # Code quality review (opt-in)
+│   └── merger.md                      # Git branch operations
 ├── commands/
-│   └── start.md             # Single interactive wizard command
+│   └── start.md                       # Interactive wizard (7 checkpoints)
 ├── skills/
-│   ├── prd-generator/       # PRD creation with clarifying questions
-│   │   └── SKILL.md
-│   └── prd-converter/       # Markdown → JSON converter
-│       └── SKILL.md
+│   ├── prd-generator/                 # PRD creation with clarifying questions
+│   ├── prd-converter/                 # Markdown -> JSON converter
+│   └── failure-analyzer/              # Error categorization + retry strategy
+├── hooks/
+│   ├── hooks.json                     # 3 hooks across 3 events
+│   ├── session-context.sh             # SessionStart: inject prd.json awareness
+│   ├── check-destructive.sh           # PreToolUse: block dangerous commands
+│   └── validate-result.sh             # SubagentStop: test/build/typecheck gate
 ├── scripts/
-│   ├── sdk-bridge.sh        # Main bash loop
-│   ├── prompt.md            # Instructions for each Claude iteration
-│   ├── check-deps.sh        # Dependency checker
-│   └── prd.json.example     # Reference format
-└── examples/                # Example PRDs
+│   ├── sdk-bridge.sh                  # Main bash loop
+│   ├── prompt.md                      # Instructions for each Claude iteration
+│   ├── check-deps.sh                  # Dependency checker
+│   ├── check-git.sh                   # Git repository diagnostics
+│   └── prd.json.example              # Reference format
+└── examples/                          # Example PRDs
 ```
 
-### Component Roles
+### Subagents
 
-**Commands (`start.md`):**
-- Single entry point orchestrating 7-checkpoint workflow
-- Uses AskUserQuestion for user input
-- Invokes skills via Task tool
-- Launches bash scripts via Bash tool
+| Agent | Model | Permission | Purpose |
+|-------|-------|------------|---------|
+| architect | sonnet | dontAsk | Read-only codebase explorer |
+| implementer | inherit | bypassPermissions | Code a single story (TDD + verify) |
+| reviewer | haiku | dontAsk | Spec compliance + validation (two-phase) |
+| code-reviewer | sonnet | dontAsk | Code quality review (opt-in) |
+| merger | haiku | bypassPermissions | Git branch operations |
 
-**Skills:**
-- `prd-generator`: Creates detailed PRDs with verifiable acceptance criteria and dependency tracking
-- `prd-converter`: Transforms markdown PRD to prd.json with inferred dependencies
+### Hooks
 
-**Scripts:**
-- `sdk-bridge.sh`: Main loop - runs fresh Claude instances until complete
-- `prompt.md`: Instructions given to each Claude agent (includes "check before implementing" guidance)
-- `check-deps.sh`: Validates claude CLI and jq installation
+| Event | Script | Purpose |
+|-------|--------|---------|
+| SessionStart | session-context.sh | Detects active prd.json, reports story progress |
+| PreToolUse (Bash) | check-destructive.sh | Blocks force push, reset --hard, etc. |
+| SubagentStop (implementer) | validate-result.sh | Runs test/build/typecheck commands |
+
+**Note:** SubagentStop hooks fire for native subagents only, NOT for `claude -p` instances from the bash loop. The bash loop uses `prompt.md` for quality checks.
 
 ### State Files (User's Project)
 
 ```
 .claude/
-├── sdk-bridge.local.md      # Config (YAML frontmatter)
-├── sdk-bridge-{branch}.pid  # Per-branch PID file
-└── sdk-bridge.log           # Background mode log
+├── sdk-bridge.config.json     # Config (JSON)
+├── sdk-bridge-{branch}.pid   # Per-branch PID file
+└── sdk-bridge.log             # Background mode log
 
 tasks/
-└── prd-{feature}.md         # Human-readable PRD
+└── prd-{feature}.md           # Human-readable PRD
 
-prd.json                     # Execution format (source of truth)
-progress.txt                 # Learnings log (append-only)
+prd.json                       # Execution format (source of truth)
+progress.txt                   # Learnings log (append-only)
 ```
 
 ---
 
-## Key Features (v4.0.0)
+## Configuration
 
-### 1. Resilience & Process Management
+`.claude/sdk-bridge.config.json`:
 
-**Iteration Timeouts:**
-- Default: 900 seconds (15 minutes)
-- Configurable via `iteration_timeout` in config
-- Foreground: Interactive prompt (skip/retry/abort)
-- Background: Auto-skip with logging
+```json
+{
+  "max_iterations": 20,
+  "iteration_timeout": 3600,
+  "execution_mode": "foreground",
+  "execution_model": "opus",
+  "effort_level": "high",
+  "branch_prefix": "sdk-bridge",
+  "test_command": "npm test",
+  "build_command": "npm run build",
+  "typecheck_command": "tsc --noEmit",
+  "code_review": true
+}
+```
 
-**Process Management:**
-- Trap-based cleanup (graceful SIGTERM, force SIGKILL fallback)
-- Per-branch PID files (allows parallel execution)
-- Duplicate run prevention
-- Automatic stale file cleanup
-- Structured logging to stderr (`[INIT]`, `[ITER-N]`, `[CLEANUP]`, `[TIMEOUT]`)
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `max_iterations` | number | 20 | Stop after N iterations |
+| `iteration_timeout` | number | 3600 | Timeout per iteration (seconds) |
+| `execution_mode` | string | "foreground" | "foreground" or "background" |
+| `execution_model` | string | "sonnet" | "sonnet" or "opus" |
+| `effort_level` | string | "" | "low", "medium", "high" (Opus only) |
+| `branch_prefix` | string | "sdk-bridge" | Git branch prefix |
+| `test_command` | string | "" | e.g. "npm test" |
+| `build_command` | string | "" | e.g. "npm run build" |
+| `typecheck_command` | string | "" | e.g. "tsc --noEmit" |
+| `code_review` | bool | true | Enable code-reviewer after validation |
 
-### 2. Already-Implemented Detection
-
-**Prompt-based** (`scripts/prompt.md` lines 5-49):
-- Agents search for existing implementation before coding
-- Verify each acceptance criterion
-- If all met: mark complete and skip
-- If partial: implement only missing pieces
-- Never refactor working code
-
-**Prevents:** 30+ minute hangs on already-completed work
-
-### 3. Enhanced PRD Generation
-
-**Story Decomposition** (5-criteria threshold):
-- ≤5 criteria: One full-stack story (UI + backend combined)
-- >5 criteria: Split by layer with explicit dependencies
-
-**Verifiable Acceptance Criteria:**
-- Every criterion includes `Must verify: [command]`
-- Specific verification method (test, command, condition)
-- Prevents ambiguous "done" states
-
-**Dependency Tracking:**
-- `depends_on`: Hard dependencies (must complete first)
-- `related_to`: Soft dependencies (check for related work)
-- `implementation_hint`: Free-form guidance
-- `check_before_implementing`: Grep commands to detect existing code
+**Legacy support:** Falls back to `.claude/sdk-bridge.local.md` (YAML frontmatter) if JSON config not found.
 
 ---
 
 ## Development Guidelines
 
-### When in doubt or asked, use the claude-docs-skill
+### When in doubt, use the claude-docs-skill
 
-**Claude API Documentation with 4-Tier Routing**
-
-- `Triggers`: "claude docs skill", "use claude docs", "claude api", "anthropic api", "agent sdk", "claude models", "tool use", "extended thinking", "mcp"
-
-**4-Tier System:**
-- Tier 1: Quick reference primer
-- Tier 2: Pattern library (8 cookbooks)
-- Tier 3: Recent changes log
-- Tier 4: Complete reference (LLM-optimized)
-
-**Coverage:** Claude API (Messages, Batches, Models, Admin) • Agent SDK (Python, TypeScript) • Tool use, Extended thinking, Streaming, Batching • Vision, PDF, MCP • Prompt engineering, Testing, Security
-
-**Use Cases:** Quick syntax lookups • Real-world patterns • Track API updates • Deep endpoint reference
-
-
+If the project has `claude-docs-skill` installed in `.claude/skills/`, use it for Claude API, CLI, SDK, hooks, plugins, or agent questions.
 
 ### Modifying Components
 
-**Commands (`start.md`):**
-- Follow 7-checkpoint structure
-- Use AskUserQuestion at decision points
-- Test both foreground and background modes
-
-**Skills (`SKILL.md`):**
-- Single responsibility
-- Lettered options for questions (A, B, C, D)
-- Document expected format
-
-**Scripts (`*.sh`):**
-- Use `set -e` for fail-fast
-- Keep portable (avoid bash 4+ features)
-- Use `${CLAUDE_PLUGIN_ROOT}` in commands
-- Use absolute paths in scripts
-- Make executable: `chmod +x scripts/*.sh`
+- **Agents** — YAML frontmatter defines tools, model, permissionMode, maxTurns. Keep tool lists minimal (least privilege). Use `haiku` for cheap/fast, `sonnet` for quality, `inherit` for user's model.
+- **Skills** — Single responsibility. Lettered options (A, B, C, D) for questions.
+- **Hooks** — `${CLAUDE_PLUGIN_ROOT}` resolves to install path. Scripts must be `chmod +x`. Sync hooks need `statusMessage` and `timeout`.
+- **Scripts** — `set -e` for fail-fast. Bash 3.2 compatible (no `declare -A`). `jq` is the only JSON parser.
+- **Commands** — Use `AskUserQuestion` at decision points. Follow 7-checkpoint structure.
 
 ### Testing Changes
 
 ```bash
-# 1. Make changes in this directory
-
-# 2. Reinstall plugin
-/plugin uninstall sdk-bridge@sdk-bridge-marketplace
-/plugin install sdk-bridge@sdk-bridge-marketplace
-
-# 3. Restart Claude Code
-
-# 4. Test command
+# Reinstall and test
+/plugin uninstall sdk-bridge@flight505-marketplace
+/plugin install sdk-bridge@flight505-marketplace
+# Restart Claude Code, then:
 /sdk-bridge:start
-
-# 5. Verify files created
-ls -la .claude/ tasks/ prd.json progress.txt
 ```
 
----
+### File Conventions
 
-## File Conventions
-
-**Naming:**
-- Commands: `kebab-case.md`
-- Skills: `kebab-case/` directories with `SKILL.md`
-- Scripts: `kebab-case.sh` or `kebab-case.md`
-- Config: `.claude/sdk-bridge.local.md`
-
-**Path References:**
-- In commands (markdown): `${CLAUDE_PLUGIN_ROOT}/scripts/file.sh`
-- In skills (markdown): relative paths `./examples/file.md`
-- In bash scripts: absolute paths `$HOME/.claude/...`
-- Never hardcode absolute paths in committed files
-
-**Script Permissions:**
-```bash
-chmod +x scripts/*.sh
-git add --chmod=+x scripts/*.sh
-```
-
----
-
-## Configuration Schema
-
-`.claude/sdk-bridge.local.md` format:
-
-```yaml
----
-max_iterations: 25           # Stop after N iterations (1 story ≈ 1-3 iterations)
-iteration_timeout: 3600      # Timeout per iteration (seconds) - 60 min default
-execution_mode: "foreground" # "foreground" or "background"
-execution_model: "opus"      # "sonnet" or "opus" for story implementation
-effort_level: "high"         # "low", "medium", or "high" (Opus 4.6 only, default: high)
-editor_command: "code"       # Command to open files
-branch_prefix: "sdk-bridge"  # Git branch prefix
----
-```
-
-**Iteration Guidelines:**
-- Each story typically consumes 1-3 iterations
-- Simple stories: 1 iteration (already-implemented check passes)
-- Standard stories: 1-2 iterations (implement + verify)
-- Complex stories: 2-3 iterations (may need retries/fixes)
-- Formula: `stories × 2.5 = recommended iterations`
-
-**Timeout Guidelines (based on avg acceptance criteria per story):**
-| Avg Criteria | Complexity | Base Timeout | Recommended |
-|--------------|------------|--------------|-------------|
-| 1-2 | Simple | 30 min | 45 min |
-| 3-4 | Standard | 45 min | 60 min |
-| 5-6 | Complex | 60 min | 75 min |
-| 7+ | Very Complex | 90 min | 105 min |
-
-**Model Selection:**
-- `execution_model`: Which Claude model implements the stories (sonnet or opus)
-- `effort_level`: Controls reasoning depth for Opus 4.6 (low/medium/high). Ignored for Sonnet.
-  - `high` (default): Deep reasoning, best quality, highest cost
-  - `medium`: Matches Sonnet-level SWE-bench at 76% fewer tokens — best cost/quality balance
-  - `low`: Fastest, minimal reasoning, cheapest
-- Planning (PRD generation) uses `CLAUDE_CODE_SUBAGENT_MODEL` env var (recommend: opus)
-- Implementation uses `execution_model` config (default: opus)
+| Context | Pattern |
+|---------|---------|
+| Commands (markdown) | `${CLAUDE_PLUGIN_ROOT}/scripts/file.sh` |
+| Skills (markdown) | Relative paths `./examples/file.md` |
+| Hooks (JSON) | `${CLAUDE_PLUGIN_ROOT}/scripts/file.sh` |
+| Bash scripts | Absolute paths `$HOME/.claude/...` |
+| Naming | `kebab-case` everywhere |
+| Permissions | `chmod +x scripts/*.sh && git add --chmod=+x scripts/*.sh` |
 
 ---
 
 ## Authentication
 
-SDK Bridge supports two methods with intelligent fallback:
-
-**OAuth Token (Recommended for Max subscribers):**
 ```bash
+# OAuth (recommended for Max subscribers)
 claude setup-token
 export CLAUDE_CODE_OAUTH_TOKEN='your-token'
-```
 
-**API Key (Fallback):**
-```bash
+# API key (fallback)
 export ANTHROPIC_API_KEY='your-key'
 ```
 
-Script prioritizes OAuth if available, falls back to API key otherwise.
+---
+
+## Gotchas
+
+- Shell scripts must be **bash 3.2 compatible** — no `declare -A`, no bash 4+ features
+- `jq` is the only JSON parser — no yq or Python for JSON
+- `hooks/hooks.json` is **auto-discovered** — never add `"hooks"` field to plugin.json
+- `PermissionRequest` hooks do NOT fire in `-p` (headless) mode
+- `set -e` + `[ cond ] && action` at end of function = silent crash — use `if/then/fi`
+- Hook scripts run in non-interactive shells — aliases and `.zshrc` not loaded
+- Exit 2 messages must go to stderr; stdout is for structured JSON output
+- SubagentStop hooks only fire for native subagents, not `claude -p` bash loop instances
 
 ---
 
 ## Debugging
-
-### Command Not Appearing
 
 ```bash
 # Check installation
 cat ~/.claude/plugins/installed_plugins.json | jq '.plugins | keys'
 
 # Verify plugin structure
-ls -la ~/.claude/plugins/cache/sdk-bridge-marketplace/sdk-bridge/*/
+ls -la ~/.claude/plugins/cache/flight505-marketplace/sdk-bridge/*/
 
-# Check manifest
-cat ~/.claude/plugins/cache/sdk-bridge-marketplace/sdk-bridge/*/.claude-plugin/plugin.json
-```
-
-### Loop Issues
-
-```bash
 # Test script directly
 bash scripts/sdk-bridge.sh 1
 
-# Check Claude CLI
-claude -p "What is 2+2?" --output-format json --no-session-persistence
-
 # Verify dependencies
 bash scripts/check-deps.sh
+
+# Validate hooks.json
+jq . hooks/hooks.json
 ```
-
-### Skills Not Loading
-
-```bash
-# Verify skill structure
-ls -la skills/*/SKILL.md
-
-# Check frontmatter
-head -5 skills/*/SKILL.md
-```
-
----
-
-## Version History
-
-### v4.0.0 (2026-01-22)
-
-**Complete rewrite with resilience features:**
-
-**Added:**
-- Interactive wizard with 7 checkpoints
-- PRD generator skill with smart decomposition (5-criteria threshold)
-- PRD converter skill with dependency inference
-- Configurable iteration timeouts (default: 15 min)
-- Mode-based timeout recovery (interactive/auto-skip)
-- Already-implemented detection (prompt-based)
-- Robust process management (trap-based cleanup, per-branch PIDs)
-- Verifiable acceptance criteria requirements
-- Dependency tracking metadata
-- Automatic archiving of previous runs
-
-**Removed:**
-- All 10 commands (replaced with single `/start`)
-- 2 validation agents (no longer needed)
-- Python harness (replaced with bash loop)
-- Complex state management
-
-**Why:** v3.x was over-engineered. This simpler approach prevents hangs, eliminates orphaned processes, and reduces duplicate work.
 
 ---
 
@@ -335,8 +211,9 @@ head -5 skills/*/SKILL.md
 
 - [Claude Code CLI](https://code.claude.com/docs/en/cli-reference.md)
 - [Claude Code Headless Mode](https://code.claude.com/docs/en/headless.md)
-- [Plugin Development Guide](https://github.com/anthropics/claude-code/blob/main/docs/plugins.md)
-- [Marketplace Format](https://github.com/anthropics/claude-code/blob/main/docs/plugin-marketplace.md)
+- [Claude Code Hooks](https://code.claude.com/docs/en/hooks.md)
+- [Claude Code Subagents](https://code.claude.com/docs/en/sub-agents.md)
+- [Plugin Development](https://github.com/anthropics/claude-code/blob/main/docs/plugins.md)
 - [Geoffrey Huntley's Ralph](https://ghuntley.com/ralph/)
 
 ---

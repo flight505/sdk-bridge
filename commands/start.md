@@ -188,7 +188,7 @@ The skill will:
 
 **Checkpoint 6: Execution Settings**
 
-Create `.claude/sdk-bridge.local.md` configuration if it doesn't exist.
+Create `.claude/sdk-bridge.config.json` configuration if it doesn't exist.
 
 **First, analyze prd.json to calculate smart defaults:**
 
@@ -215,7 +215,9 @@ Create `.claude/sdk-bridge.local.md` configuration if it doesn't exist.
    - `generous` = base_timeout + 30 min (extra time for difficult work)
    - `maximum` = 120 min (2 hours, prevents runaway)
 
-Use AskUserQuestion to collect settings (all 4 questions in one call for tabbed UI):
+Use AskUserQuestion to collect settings. Use two calls — first for execution settings (4 questions), then for quality settings (2 questions):
+
+**AskUserQuestion call 1 — Execution settings (4 questions in one call):**
 
 Question 1: "You have [story_count] stories. How many iterations?"
 - Header: "Iterations"
@@ -250,7 +252,32 @@ Question 4: "Which model and effort level for story implementation?"
   - Label: "Opus 4.6 (high effort)" | Description: "Best quality - adaptive reasoning, #1 SWE-bench, 128K output (default effort)"
   - Label: "Opus 4.6 (medium effort)" | Description: "Opus quality at 76% fewer tokens - matches Sonnet speed, better reasoning"
 
-**After collecting answers, parse values:**
+**AskUserQuestion call 2 — Quality settings (2 questions):**
+
+Question 1: "Does your project have test, build, or typecheck commands? (Used for validation after each story)"
+- Header: "Quality"
+- multiSelect: false
+- Options:
+  - Label: "Auto-detect" | Description: "SDK-Bridge will look for package.json scripts, Makefile targets, etc."
+  - Label: "I'll specify" | Description: "Enter commands manually (e.g., npm test, tsc --noEmit)"
+  - Label: "Skip" | Description: "No quality commands configured"
+
+If "Auto-detect": Search for:
+- `package.json` → extract `scripts.test`, `scripts.build`, `scripts.typecheck` or `scripts.check`
+- `Makefile` → look for `test`, `build`, `check` targets
+- `pyproject.toml` → look for test commands
+- If found, show what was detected and confirm
+
+If "I'll specify": Ask conversationally for test_command, build_command, typecheck_command (all optional).
+
+Question 2: "Enable code review after each story? (Catches real bugs — recommended)"
+- Header: "Review"
+- multiSelect: false
+- Options:
+  - Label: "Yes (Recommended)" | Description: "Run code-reviewer agent after each story. Catches bugs, security issues, architecture problems."
+  - Label: "No" | Description: "Skip code review for faster execution"
+
+**After collecting all answers, parse values and create JSON config file:**
 
 For iterations (Question 1):
 - "[recommended] iterations" → use the calculated `recommended` value
@@ -259,51 +286,41 @@ For iterations (Question 1):
 - "[minimum] iterations" → use the calculated `minimum` value
 - Custom input (via "Other") → parse number from string
 
-For timeout (Question 2):
-- "[quick] minutes" → quick × 60 (in seconds)
-- "[recommended] minutes" → recommended × 60 (in seconds)
-- "[generous] minutes" → generous × 60 (in seconds)
-- "120 minutes" → 7200
-- Custom input (via "Other") → multiply number by 60
+For timeout: multiply minutes by 60 for seconds.
+For mode: "Foreground" → "foreground", "Background" → "background"
+For model: "Sonnet 4.5" → sonnet, "Opus 4.6 (high effort)" → opus + high, "Opus 4.6 (medium effort)" → opus + medium
 
-For mode (Question 3):
-- "Foreground" → foreground
-- "Background" → background
-
-For model (Question 4):
-- "Sonnet 4.5" → execution_model: sonnet, effort_level: (not set)
-- "Opus 4.6 (high effort)" → execution_model: opus, effort_level: high
-- "Opus 4.6 (medium effort)" → execution_model: opus, effort_level: medium
-- Custom input (via "Other") → parse model and effort from string
-
-Create config file with parsed values:
-```yaml
----
-max_iterations: [parsed number from Q1]
-iteration_timeout: [parsed seconds from Q2]
-execution_mode: [parsed mode from Q3]
-execution_model: [parsed model from Q4]
-effort_level: [parsed effort from Q4, omit for Sonnet]
-editor_command: "open"
-branch_prefix: "sdk-bridge"
----
-
-# SDK Bridge Configuration
-
-Edit these settings as needed and run `/sdk-bridge:start` again.
+Create `.claude/sdk-bridge.config.json` with parsed values:
+```json
+{
+  "max_iterations": 20,
+  "iteration_timeout": 3600,
+  "execution_mode": "foreground",
+  "execution_model": "opus",
+  "effort_level": "high",
+  "branch_prefix": "sdk-bridge",
+  "test_command": "npm test",
+  "build_command": "npm run build",
+  "typecheck_command": "tsc --noEmit",
+  "code_review": true
+}
 ```
 
-Example (8 stories, avg 4 criteria each → standard complexity):
-```yaml
----
-max_iterations: 20    # ceil(8 × 2.5) = 20 recommended
-iteration_timeout: 3600  # 60 min (45 base + 15 buffer)
-execution_mode: foreground
-execution_model: opus
-effort_level: high
-editor_command: "open"
-branch_prefix: "sdk-bridge"
----
+Only include `test_command`, `build_command`, `typecheck_command` fields if the user provided values (omit empty ones). The `code_review` field defaults to `true`.
+
+Example (8 stories, avg 4 criteria, Node.js project):
+```json
+{
+  "max_iterations": 20,
+  "iteration_timeout": 3600,
+  "execution_mode": "foreground",
+  "execution_model": "opus",
+  "effort_level": "high",
+  "branch_prefix": "sdk-bridge",
+  "test_command": "npm test",
+  "typecheck_command": "tsc --noEmit",
+  "code_review": true
+}
 ```
 
 **Checkpoint 7: Launch**

@@ -127,51 +127,38 @@ PRD_FILE="$PROJECT_DIR/prd.json"
 PROGRESS_FILE="$PROJECT_DIR/progress.txt"
 ARCHIVE_DIR="$PROJECT_DIR/archive"
 LAST_BRANCH_FILE="$PROJECT_DIR/.last-branch"
-CONFIG_FILE="$PROJECT_DIR/.claude/sdk-bridge.local.md"
+CONFIG_FILE="$PROJECT_DIR/.claude/sdk-bridge.config.json"
+# Legacy YAML config (for backwards compatibility)
+LEGACY_CONFIG_FILE="$PROJECT_DIR/.claude/sdk-bridge.local.md"
 
-# Read timeout from config or use default (900 seconds = 15 minutes)
+# Read configuration from JSON config (or legacy YAML fallback)
 ITERATION_TIMEOUT=900
+EXECUTION_MODE="foreground"
+EXECUTION_MODEL="sonnet"
+EFFORT_LEVEL=""
+CODE_REVIEW="true"
+
 if [ -f "$CONFIG_FILE" ]; then
   echo "[INIT] Reading configuration from $CONFIG_FILE" >&2
-  # Extract iteration_timeout from YAML frontmatter
-  TIMEOUT_FROM_CONFIG=$(grep -A 10 "^---$" "$CONFIG_FILE" | grep "iteration_timeout:" | sed 's/.*: *//' || echo "")
-  if [ -n "$TIMEOUT_FROM_CONFIG" ]; then
-    ITERATION_TIMEOUT=$TIMEOUT_FROM_CONFIG
-    echo "[INIT] Using configured timeout: ${ITERATION_TIMEOUT}s" >&2
-  fi
+  ITERATION_TIMEOUT=$(jq -r '.iteration_timeout // 900' "$CONFIG_FILE" 2>/dev/null) || ITERATION_TIMEOUT=900
+  EXECUTION_MODE=$(jq -r '.execution_mode // "foreground"' "$CONFIG_FILE" 2>/dev/null) || EXECUTION_MODE="foreground"
+  EXECUTION_MODEL=$(jq -r '.execution_model // "sonnet"' "$CONFIG_FILE" 2>/dev/null) || EXECUTION_MODEL="sonnet"
+  EFFORT_LEVEL=$(jq -r '.effort_level // ""' "$CONFIG_FILE" 2>/dev/null) || EFFORT_LEVEL=""
+  CODE_REVIEW=$(jq -r '.code_review // true' "$CONFIG_FILE" 2>/dev/null) || CODE_REVIEW="true"
+  echo "[INIT] Config loaded: timeout=${ITERATION_TIMEOUT}s, mode=$EXECUTION_MODE, model=$EXECUTION_MODEL" >&2
+elif [ -f "$LEGACY_CONFIG_FILE" ]; then
+  echo "[INIT] Reading legacy YAML config from $LEGACY_CONFIG_FILE" >&2
+  TIMEOUT_FROM_CONFIG=$(grep -A 10 "^---$" "$LEGACY_CONFIG_FILE" | grep "iteration_timeout:" | sed 's/.*: *//' || echo "")
+  if [ -n "$TIMEOUT_FROM_CONFIG" ]; then ITERATION_TIMEOUT=$TIMEOUT_FROM_CONFIG; fi
+  MODE_FROM_CONFIG=$(grep -A 10 "^---$" "$LEGACY_CONFIG_FILE" | grep "execution_mode:" | sed 's/.*: *//' || echo "")
+  if [ -n "$MODE_FROM_CONFIG" ]; then EXECUTION_MODE=$MODE_FROM_CONFIG; fi
+  MODEL_FROM_CONFIG=$(grep -A 10 "^---$" "$LEGACY_CONFIG_FILE" | grep "execution_model:" | sed 's/.*: *//' | tr -d '"' || echo "")
+  if [ -n "$MODEL_FROM_CONFIG" ]; then EXECUTION_MODEL=$MODEL_FROM_CONFIG; fi
+  EFFORT_FROM_CONFIG=$(grep -A 10 "^---$" "$LEGACY_CONFIG_FILE" | grep "effort_level:" | sed 's/.*: *//' | tr -d '"' || echo "")
+  if [ -n "$EFFORT_FROM_CONFIG" ]; then EFFORT_LEVEL=$EFFORT_FROM_CONFIG; fi
 fi
 
 echo "[INIT] Iteration timeout: ${ITERATION_TIMEOUT}s ($(($ITERATION_TIMEOUT / 60)) minutes)" >&2
-
-# Determine execution mode (foreground or background)
-EXECUTION_MODE="foreground"
-if [ -f "$CONFIG_FILE" ]; then
-  MODE_FROM_CONFIG=$(grep -A 10 "^---$" "$CONFIG_FILE" | grep "execution_mode:" | sed 's/.*: *//' || echo "")
-  if [ -n "$MODE_FROM_CONFIG" ]; then
-    EXECUTION_MODE=$MODE_FROM_CONFIG
-    echo "[INIT] Execution mode: $EXECUTION_MODE" >&2
-  fi
-fi
-
-# Determine execution model (sonnet or opus)
-EXECUTION_MODEL="sonnet"
-if [ -f "$CONFIG_FILE" ]; then
-  MODEL_FROM_CONFIG=$(grep -A 10 "^---$" "$CONFIG_FILE" | grep "execution_model:" | sed 's/.*: *//' | tr -d '"' || echo "")
-  if [ -n "$MODEL_FROM_CONFIG" ]; then
-    EXECUTION_MODEL=$MODEL_FROM_CONFIG
-    echo "[INIT] Execution model: $EXECUTION_MODEL" >&2
-  fi
-fi
-
-# Determine effort level for Opus 4.6 (low/medium/high)
-EFFORT_LEVEL=""
-if [ -f "$CONFIG_FILE" ]; then
-  EFFORT_FROM_CONFIG=$(grep -A 10 "^---$" "$CONFIG_FILE" | grep "effort_level:" | sed 's/.*: *//' | tr -d '"' || echo "")
-  if [ -n "$EFFORT_FROM_CONFIG" ]; then
-    EFFORT_LEVEL=$EFFORT_FROM_CONFIG
-    echo "[INIT] Effort level: $EFFORT_LEVEL" >&2
-  fi
-fi
 
 # Export effort level as env var for Claude CLI (Opus 4.6 adaptive reasoning)
 if [ -n "$EFFORT_LEVEL" ] && [ "$EXECUTION_MODEL" = "opus" ]; then
@@ -262,8 +249,31 @@ echo $$ > "$INSTANCE_PID_FILE"
 echo "Starting SDK Bridge - Max iterations: $MAX_ITERATIONS"
 echo "Branch: $BRANCH_NAME"
 echo "Model: $EXECUTION_MODEL$([ -n "$EFFORT_LEVEL" ] && echo " (effort: $EFFORT_LEVEL)")"
+echo "Code review: $CODE_REVIEW"
 echo "PID: $$"
 echo "Timeout: ${ITERATION_TIMEOUT}s per iteration"
+
+# Resume intelligence — report progress on startup
+if [ -f "$PRD_FILE" ]; then
+  TOTAL_STORIES=$(jq '.userStories | length' "$PRD_FILE" 2>/dev/null) || TOTAL_STORIES=0
+  DONE_STORIES=$(jq '[.userStories[] | select(.passes == true)] | length' "$PRD_FILE" 2>/dev/null) || DONE_STORIES=0
+  PENDING_STORIES=$(jq '[.userStories[] | select(.passes == false)] | length' "$PRD_FILE" 2>/dev/null) || PENDING_STORIES=0
+  NEXT_STORY=$(jq -r '.userStories[] | select(.passes == false) | .id' "$PRD_FILE" 2>/dev/null | head -1 || echo "none")
+
+  if [ "$DONE_STORIES" -gt 0 ] 2>/dev/null; then
+    echo ""
+    echo "Resume detected: ${DONE_STORIES}/${TOTAL_STORIES} stories complete, ${PENDING_STORIES} pending"
+    echo "Starting from: $NEXT_STORY"
+
+    # Carry forward learnings from completed stories to progress.txt
+    if [ -f "$PROGRESS_FILE" ]; then
+      LEARNINGS_COUNT=$(grep -c "Learnings for future iterations" "$PROGRESS_FILE" 2>/dev/null || true)
+      if [ "$LEARNINGS_COUNT" -gt 0 ]; then
+        echo "Carrying forward $LEARNINGS_COUNT sets of learnings from previous stories"
+      fi
+    fi
+  fi
+fi
 
 # Function to handle timeout
 handle_timeout() {
