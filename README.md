@@ -2,7 +2,7 @@
 
 ![SDK Bridge Hero](./assets/sdk-bridge-hero.jpg)
 
-[![Version](https://img.shields.io/badge/version-5.0.0-blue.svg)](https://github.com/flight505/sdk-bridge)
+[![Version](https://img.shields.io/badge/version-6.0.0-blue.svg)](https://github.com/flight505/sdk-bridge)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)](https://github.com/anthropics/claude-code)
 
@@ -14,21 +14,29 @@ Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
 
 ---
 
-## What's New in v5.0.0
+## What's New in v6.0.0
 
-- **5 subagents** — architect, implementer (with TDD), reviewer (two-stage), code-reviewer, merger
-- **3 hooks** — SessionStart context injection, PreToolUse safety, SubagentStop validation
-- **Failure categorization** — Analyzes errors, recommends retry strategy
-- **JSON config** — `.claude/sdk-bridge.config.json` replaces YAML frontmatter
-- **Resume intelligence** — Detects completed stories on interrupted runs
-- **Quality gates** — Test, build, typecheck commands run after each story
-- **Code review** — Optional adversarial code review after validation
+- **Worktree isolation** — Each implementer story runs in an isolated git worktree, no cross-story interference
+- **Structured output** — `--json-schema` enforces validated JSON from every iteration (replaces string parsing)
+- **Fallback model** — Configurable `--fallback-model` for resilience when primary model is overloaded
+- **5 hooks** — Added SubagentStart (inject learnings), PreCompact (preserve context during compaction), PostToolUse (auto-lint)
+- **Advisory code review** — Fresh Sonnet instance reviews each completed story's diff, logged to progress.txt
+- **Agent memory** — `memory: project` on implementer, reviewer, and code-reviewer for cross-session learning
+- **Wider skill triggers** — prd-generator and prd-converter trigger on natural language ("plan this", "run this")
+
+### Previous (v5.0.0)
+
+- 5 subagents — architect, implementer (with TDD), reviewer (two-stage), code-reviewer, merger
+- Failure categorization — Analyzes errors, recommends retry strategy
+- JSON config — `.claude/sdk-bridge.config.json` replaces YAML frontmatter
+- Resume intelligence — Detects completed stories on interrupted runs
+- Quality gates — Test, build, typecheck commands run after each story
 
 ---
 
 ## Architecture
 
-![SDK Bridge Architecture](./assets/sdk-bridge-architecture.png?v=5.0.0)
+![SDK Bridge Architecture](./assets/sdk-bridge-architecture.png?v=6.0.0)
 
 SDK Bridge uses a **bash orchestration loop** that spawns fresh Claude CLI instances for each iteration. State persists via:
 - **prd.json** — Source of truth for story completion status
@@ -44,13 +52,13 @@ Each iteration is a fresh Claude instance with clean context. The bash coordinat
 | Commands | 1 | Interactive wizard (`/sdk-bridge:start`) |
 | Skills | 3 | PRD generator, PRD converter, failure analyzer |
 | Agents | 5 | architect, implementer, reviewer, code-reviewer, merger |
-| Hooks | 3 | Context injection, safety checks, validation gates |
+| Hooks | 5 | Context injection, safety checks, validation gates, learnings injection, compaction protection |
 
 ---
 
 ## Interactive Workflow
 
-![SDK Bridge Wizard](./assets/sdk-bridge-wizard.png?v=5.0.0)
+![SDK Bridge Wizard](./assets/sdk-bridge-wizard.png?v=6.0.0)
 
 SDK Bridge guides you through a **7-checkpoint interactive workflow**:
 
@@ -114,16 +122,18 @@ That's it! SDK Bridge will guide you through PRD generation, review, configurati
 ```
 for iteration in 1..max_iterations:
   1. Read prd.json to find next story where "passes": false
-  2. Spawn fresh Claude instance with clean context
+  2. Spawn fresh Claude instance (isolated worktree, clean context)
   3. Claude implements ONE story:
      - Check for existing implementation first
      - Implement with TDD discipline
+     - Auto-lint after each edit (PostToolUse hook)
      - Run quality checks (test, build, typecheck)
      - Commit if checks pass
      - Update prd.json to mark story complete
      - Append learnings to progress.txt
-  4. Check for completion signal
-  5. If all done, exit; otherwise continue
+  4. Parse structured JSON output (status, story_id, error_category)
+  5. Run advisory code review (Sonnet, if enabled)
+  6. If all stories pass, exit; otherwise continue
 ```
 
 ### Key Files
@@ -152,7 +162,8 @@ Created automatically by the wizard, or edit `.claude/sdk-bridge.config.json`:
   "test_command": "npm test",
   "build_command": "npm run build",
   "typecheck_command": "tsc --noEmit",
-  "code_review": true
+  "code_review": true,
+  "fallback_model": "sonnet"
 }
 ```
 
@@ -180,12 +191,17 @@ Created automatically by the wizard, or edit `.claude/sdk-bridge.config.json`:
 
 ## Quality Gates
 
-SDK Bridge v5 enforces quality at multiple levels:
+SDK Bridge v6 enforces quality at multiple levels:
 
+- **Worktree isolation** — Each story runs in an isolated git worktree, no cross-story interference
 - **TDD discipline** — Implementer writes tests before implementation
+- **Auto-lint on edit** — PostToolUse hook runs typecheck after every Edit/Write (interactive path)
 - **Automated checks** — Test, build, typecheck commands run after each story
+- **Structured output** — `--json-schema` validates every iteration returns proper status/results
+- **Advisory code review** — Fresh Sonnet instance reviews completed story diffs (logged, non-blocking)
 - **Two-stage review** — Spec compliance (reviewer) then code quality (code-reviewer)
 - **Failure categorization** — Errors are analyzed and retried with appropriate strategy
+- **Context preservation** — PreCompact hook re-injects story context before compaction
 - **Resume intelligence** — Interrupted runs detect and skip completed stories
 
 ---
