@@ -26,6 +26,19 @@
         ]
       }
     ],
+    "SubagentStart": [
+      {
+        "matcher": "implementer",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/inject-learnings.sh",
+            "timeout": 5000,
+            "statusMessage": "Loading codebase patterns..."
+          }
+        ]
+      }
+    ],
     "SubagentStop": [
       {
         "matcher": "implementer",

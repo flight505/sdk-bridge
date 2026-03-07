@@ -17,6 +17,14 @@ isolation: worktree
 memory: project
 skills:
   - failure-analyzer
+hooks:
+  PostToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: command
+          command: "bash ${CLAUDE_PLUGIN_ROOT}/hooks/auto-lint.sh"
+          timeout: 10000
+          statusMessage: "Running typecheck..."
 ---
 
 # Implementer Agent

@@ -66,8 +66,11 @@ sdk-bridge/
 |-------|--------|---------|
 | SessionStart | session-context.sh | Detects active prd.json, reports story progress |
 | PreToolUse (Bash) | check-destructive.sh | Blocks force push, reset --hard, etc. |
+| SubagentStart (implementer) | inject-learnings.sh | Injects codebase patterns from progress.txt into agent context |
 | SubagentStop (implementer) | validate-result.sh | Runs test/build/typecheck commands |
 | PreCompact | inject-prd-context.sh | Re-injects current story + patterns before compaction |
+
+The implementer agent also has an inline `PostToolUse` hook (`auto-lint.sh`) that runs the project's typecheck command after every Edit/Write during interactive sessions.
 
 **Note:** SubagentStop hooks fire for native subagents only, NOT for `claude -p` instances from the bash loop. The bash loop uses `prompt.md` for quality checks.
 

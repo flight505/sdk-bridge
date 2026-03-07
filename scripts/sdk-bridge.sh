@@ -490,6 +490,29 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     echo "Continuing to next iteration..."
   fi
 
+  # Advisory code review after successful story completion
+  if [ "$CODE_REVIEW" = "true" ] && [ "$STORY_STATUS" = "completed" ]; then
+    echo ""
+    echo "Running code review for ${STORY_ID}..."
+    REVIEW_TEMP="/tmp/sdk-bridge-$$-$i-review.txt"
+
+    # Short timeout (5 min), Sonnet for speed, read-only tools
+    $TIMEOUT_CMD 300 claude -p "You are a code reviewer. Read prd.json and find story ${STORY_ID}. Run git diff to see what changed. Review for: correctness, security, architecture, test quality. Be concise — output a short summary of issues found or 'No issues.' if clean." \
+      --output-format json \
+      --allowedTools "Read,Grep,Glob,Bash(git diff *),Bash(git log *),Bash(git show *)" \
+      --no-session-persistence \
+      --model "sonnet" \
+      > "$REVIEW_TEMP" 2>&1 || true
+
+    REVIEW_RESULT=$(jq -r '.result // "Review unavailable"' "$REVIEW_TEMP" 2>/dev/null || echo "Review unavailable")
+    rm -f "$REVIEW_TEMP"
+
+    echo "Code review: $REVIEW_RESULT"
+    echo "" >> "$PROGRESS_FILE"
+    echo "--- Code Review for ${STORY_ID} ---" >> "$PROGRESS_FILE"
+    echo "$REVIEW_RESULT" >> "$PROGRESS_FILE"
+  fi
+
   echo "Iteration $i complete. Continuing..."
   sleep 2
 done
