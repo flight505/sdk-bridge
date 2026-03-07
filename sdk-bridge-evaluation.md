@@ -395,7 +395,7 @@ designed for *native subagent* invocation (from interactive sessions), not for t
 **Revisit when:** Claude Code adds a way to run `--agent` as main thread while still firing
 Stop hooks, or when the loop is migrated to Agent SDK.
 
-#### 7. Add `SubagentStart` hook for implementer — RECOMMENDED
+#### 7. ~~Add `SubagentStart` hook for implementer~~ DONE (789bf49)
 
 ```json
 {
@@ -441,7 +441,7 @@ the bash loop (which is fine — the loop already handles this via prompt.md ins
 
 **Verdict:** Skip entirely. Not needed for the target audience.
 
-#### 9. Add inline hooks to implementer for auto-linting — RECOMMENDED
+#### 9. ~~Add inline hooks to implementer for auto-linting~~ DONE (789bf49)
 
 ```yaml
 hooks:
@@ -469,7 +469,7 @@ project.
 **Verdict:** Good addition for interactive path. No impact on bash loop (which has its own
 validation).
 
-#### 10. Implement code review in bash loop — RECOMMENDED
+#### 10. ~~Implement code review in bash loop~~ DONE (789bf49)
 
 The `CODE_REVIEW` config exists but is never used in the bash loop. This is the only Tier 2 item
 that directly improves the Ralph loop.
@@ -562,19 +562,22 @@ All Tier 1 items implemented:
 4. `--fallback-model` configurable resilience
 5. `PreCompact` hook with inject-prd-context.sh
 
-### Next Steps (v6.1.0 candidates)
+### Tier 2 (SHIPPED — commit 789bf49)
 
-Reassessed through Ralph loop principles, two items are worth implementing:
+Reassessed through Ralph loop principles, three items implemented:
 
-| # | Item | Effort | Benefit |
+| # | Item | Status | Benefit |
 |---|------|--------|---------|
-| 7 | SubagentStart hook (inject learnings) | Low | Deterministic knowledge transfer for interactive path |
-| 9 | PostToolUse auto-lint on implementer | Low | Earlier error detection for interactive path |
-| 10 | Code review in bash loop | Medium | Closes the config-vs-behavior gap, advisory review per story |
+| 7 | SubagentStart hook (inject learnings) | **DONE** | Deterministic knowledge transfer for interactive path |
+| 9 | PostToolUse auto-lint on implementer | **DONE** | Earlier error detection for interactive path |
+| 10 | Code review in bash loop | **DONE** | Closes the config-vs-behavior gap, advisory review per story |
 
-Items **skipped** with rationale:
-- **#6 `--agent` flag:** Breaks SubagentStop hook chain; prompt.md approach is correct for Ralph
-- **#8 `--max-turns`/`--max-budget-usd`:** OAuth/Max subscribers don't need cost caps; timeout is sufficient
-- **#11 Agent SDK migration:** Bash loop is the right abstraction for the Ralph pattern
-- **#12 Agent Teams:** Experimental, high overhead, sequential is more debuggable
-- **#13 Prompt hooks:** Non-deterministic validation; deterministic hooks are sufficient for now
+### Items Deferred or Skipped
+
+| # | Item | Verdict | Rationale |
+|---|------|---------|-----------|
+| 6 | `--agent` flag in bash loop | **DEFERRED** | Breaks SubagentStop hook chain; prompt.md approach is correct for Ralph. Revisit when `--agent` supports Stop hooks as main thread, or when migrating to Agent SDK. |
+| 8 | `--max-turns` / `--max-budget-usd` | **SKIPPED** | OAuth/Max subscribers don't need cost caps; timeout is the designed safety valve. More exit conditions = more failure modes. |
+| 11 | Agent SDK migration | **SKIPPED** | Bash loop is the right abstraction for the Ralph pattern — ~470 lines, trivially debuggable, no dependencies. Consider when bash genuinely can't express the needed logic. |
+| 12 | Agent Teams for parallel stories | **WATCHING** | Experimental, high token cost, sequential is more predictable and debuggable. Consider when Agent Teams is stable and PRDs have 10+ independent stories. |
+| 13 | `prompt` hooks for judgment-based validation | **WATCHING** | Non-deterministic validation adds complexity. Consider when deterministic hooks (typecheck, test, build) aren't catching enough real issues. |

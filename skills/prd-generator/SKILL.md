@@ -1,6 +1,6 @@
 ---
 name: prd-generator
-description: "Generate a Product Requirements Document (PRD) for a new feature. Use when planning a feature, starting a new project, or when asked to create a PRD. Triggers on: create a prd, write prd for, plan this feature, requirements for, spec out."
+description: "Generate a structured Product Requirements Document (PRD) for features or projects. Use this skill whenever the user describes a feature they want to build, asks to plan work, scope a project, break something into tasks, write requirements, or create a spec. Also trigger when user says 'what should I build first', 'help me plan this', 'create user stories', or provides a feature description and needs it structured for implementation."
 ---
 
 # PRD Generator
