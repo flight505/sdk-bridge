@@ -1,6 +1,6 @@
 ---
 name: prd-generator
-description: "Generate a structured Product Requirements Document (PRD) for features or projects. Use this skill whenever the user describes a feature they want to build, asks to plan work, scope a project, break something into tasks, write requirements, or create a spec. Also trigger when user says 'what should I build first', 'help me plan this', 'create user stories', or provides a feature description and needs it structured for implementation."
+description: "Generate a Product Requirements Document (PRD) for SDK Bridge autonomous execution. Use when the user explicitly asks to create a PRD, write requirements, generate user stories for sdk-bridge, or scope a feature into a PRD. Also trigger on 'create prd', 'write prd for', 'spec out for sdk-bridge', 'generate requirements document'. Do NOT trigger on general planning, brainstorming, or task decomposition — those belong to other skills."
 ---
 
 # PRD Generator

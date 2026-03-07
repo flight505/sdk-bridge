@@ -1,6 +1,6 @@
 ---
 name: prd-converter
-description: "Convert markdown PRDs into prd.json execution format for SDK Bridge autonomous agents. Use when a PRD exists and needs to be made executable, when the user says 'run this', 'execute this plan', 'start implementing', or after prd-generator creates a new PRD. Also trigger on 'make this a json', 'convert to sdk-bridge format', or when /sdk-bridge:start reaches the conversion checkpoint."
+description: "Convert markdown PRDs into prd.json execution format for SDK Bridge autonomous agents. Use when a PRD document exists and needs to be converted to SDK Bridge's JSON format. Trigger on 'convert prd', 'convert to prd.json', 'turn this PRD into sdk-bridge format', 'create prd.json from this PRD'. Also used internally by /sdk-bridge:start at the conversion checkpoint. Do NOT trigger on general JSON conversion or plan execution requests."
 ---
 
 # SDK Bridge PRD Converter

@@ -534,17 +534,19 @@ real issues.
 
 ---
 
-## Part 4: Skill Description Improvements
+## Part 4: Skill Description Improvements — DONE
 
-### Current vs Recommended Descriptions
+Descriptions updated with cross-triggering guard rails. When sdk-bridge and TaskPlex are both installed, generic phrases like "plan work", "break into tasks", "run this", "start implementing" must NOT trigger sdk-bridge skills — those belong to TaskPlex's brainstorm/writing-plans/TDD skills.
+
+### Applied Descriptions
 
 **prd-generator:**
-- Current: `"Generate a Product Requirements Document (PRD) for a new feature. Use when planning a feature, starting a new project, or when asked to create a PRD. Triggers on: create a prd, write prd for, plan this feature, requirements for, spec out."`
-- Recommended: `"Generate a structured Product Requirements Document (PRD) for features or projects. Use this skill whenever the user describes a feature they want to build, asks to plan work, scope a project, break something into tasks, write requirements, or create a spec. Also trigger when user says 'what should I build first', 'help me plan this', 'create user stories', or provides a feature description and needs it structured for implementation."`
+- Before: `"...Triggers on: create a prd, write prd for, plan this feature, requirements for, spec out."`
+- After: `"Generate a Product Requirements Document (PRD) for SDK Bridge autonomous execution. Use when the user explicitly asks to create a PRD, write requirements, generate user stories for sdk-bridge, or scope a feature into a PRD. Also trigger on 'create prd', 'write prd for', 'spec out for sdk-bridge', 'generate requirements document'. Do NOT trigger on general planning, brainstorming, or task decomposition — those belong to other skills."`
 
 **prd-converter:**
-- Current: `"Convert PRDs to prd.json format for the SDK Bridge autonomous agent system. Use when you have an existing PRD and need to convert it to SDK Bridge's JSON format. Triggers on: convert this prd, turn this into sdk-bridge format, create prd.json from this, convert prd to json."`
-- Recommended: `"Convert markdown PRDs into prd.json execution format for SDK Bridge autonomous agents. Use when a PRD exists and needs to be made executable, when the user says 'run this', 'execute this plan', 'start implementing', or after prd-generator creates a new PRD. Also trigger on 'make this a json', 'convert to sdk-bridge format', or when /sdk-bridge:start reaches the conversion checkpoint."`
+- Before: `"...Triggers on: convert this prd, turn this into sdk-bridge format, create prd.json from this, convert prd to json."`
+- After: `"Convert markdown PRDs into prd.json execution format for SDK Bridge autonomous agents. Use when a PRD document exists and needs to be converted to SDK Bridge's JSON format. Trigger on 'convert prd', 'convert to prd.json', 'turn this PRD into sdk-bridge format', 'create prd.json from this PRD'. Also used internally by /sdk-bridge:start at the conversion checkpoint. Do NOT trigger on general JSON conversion or plan execution requests."`
 
 **failure-analyzer:**
 - Fine as-is (not user-invocable, only used by implementer skill injection)
