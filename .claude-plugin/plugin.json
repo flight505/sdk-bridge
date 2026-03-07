@@ -1,6 +1,6 @@
 {
   "name": "sdk-bridge",
-  "version": "6.0.0",
+  "version": "6.0.1",
   "description": "PRD-driven autonomous development — generates PRDs, converts to execution format, runs fresh Claude instances with quality gates until complete. Two-stage review, TDD enforcement, failure categorization.",
   "author": {
     "name": "Jesper Vang",
