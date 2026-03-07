@@ -9,7 +9,7 @@ tools:
 disallowedTools:
   - Edit
   - Write
-  - Task
+  - Agent
 model: haiku
 permissionMode: dontAsk
 maxTurns: 40

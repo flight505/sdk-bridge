@@ -9,10 +9,11 @@ tools:
   - Glob
   - Grep
 disallowedTools:
-  - Task
+  - Agent
 model: inherit
 permissionMode: bypassPermissions
 maxTurns: 150
+isolation: worktree
 memory: project
 skills:
   - failure-analyzer

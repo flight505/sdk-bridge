@@ -9,7 +9,7 @@ tools:
 disallowedTools:
   - Edit
   - Write
-  - Task
+  - Agent
 model: sonnet
 permissionMode: dontAsk
 maxTurns: 30

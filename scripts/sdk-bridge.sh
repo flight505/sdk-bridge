@@ -137,6 +137,7 @@ EXECUTION_MODE="foreground"
 EXECUTION_MODEL="sonnet"
 EFFORT_LEVEL=""
 CODE_REVIEW="true"
+FALLBACK_MODEL=""
 
 if [ -f "$CONFIG_FILE" ]; then
   echo "[INIT] Reading configuration from $CONFIG_FILE" >&2
@@ -145,6 +146,7 @@ if [ -f "$CONFIG_FILE" ]; then
   EXECUTION_MODEL=$(jq -r '.execution_model // "sonnet"' "$CONFIG_FILE" 2>/dev/null) || EXECUTION_MODEL="sonnet"
   EFFORT_LEVEL=$(jq -r '.effort_level // ""' "$CONFIG_FILE" 2>/dev/null) || EFFORT_LEVEL=""
   CODE_REVIEW=$(jq -r '.code_review // true' "$CONFIG_FILE" 2>/dev/null) || CODE_REVIEW="true"
+  FALLBACK_MODEL=$(jq -r '.fallback_model // ""' "$CONFIG_FILE" 2>/dev/null) || FALLBACK_MODEL=""
   echo "[INIT] Config loaded: timeout=${ITERATION_TIMEOUT}s, mode=$EXECUTION_MODE, model=$EXECUTION_MODEL" >&2
 elif [ -f "$LEGACY_CONFIG_FILE" ]; then
   echo "[INIT] Reading legacy YAML config from $LEGACY_CONFIG_FILE" >&2
@@ -165,6 +167,13 @@ if [ -n "$EFFORT_LEVEL" ] && [ "$EXECUTION_MODEL" = "opus" ]; then
   export CLAUDE_CODE_EFFORT_LEVEL="$EFFORT_LEVEL"
   echo "[INIT] CLAUDE_CODE_EFFORT_LEVEL=$EFFORT_LEVEL (Opus 4.6 adaptive reasoning)" >&2
 fi
+
+if [ -n "$FALLBACK_MODEL" ]; then
+  echo "[INIT] Fallback model: $FALLBACK_MODEL" >&2
+fi
+
+# JSON schema for structured output from each iteration
+RESULT_SCHEMA='{"type":"object","required":["story_id","status"],"properties":{"story_id":{"type":"string"},"status":{"type":"string","enum":["completed","failed","skipped"]},"error_category":{"type":["string","null"]},"error_details":{"type":["string","null"]},"files_modified":{"type":"array","items":{"type":"string"}},"files_created":{"type":"array","items":{"type":"string"}},"commits":{"type":"array","items":{"type":"string"}},"learnings":{"type":"array","items":{"type":"string"}},"retry_hint":{"type":["string","null"]}}}'
 
 # Archive previous run if branch changed
 if [ -f "$PRD_FILE" ] && [ -f "$LAST_BRANCH_FILE" ]; then
@@ -248,7 +257,7 @@ echo $$ > "$INSTANCE_PID_FILE"
 
 echo "Starting SDK Bridge - Max iterations: $MAX_ITERATIONS"
 echo "Branch: $BRANCH_NAME"
-echo "Model: $EXECUTION_MODEL$([ -n "$EFFORT_LEVEL" ] && echo " (effort: $EFFORT_LEVEL)")"
+echo "Model: $EXECUTION_MODEL$([ -n "$EFFORT_LEVEL" ] && echo " (effort: $EFFORT_LEVEL)")$([ -n "$FALLBACK_MODEL" ] && echo " (fallback: $FALLBACK_MODEL)")"
 echo "Code review: $CODE_REVIEW"
 echo "PID: $$"
 echo "Timeout: ${ITERATION_TIMEOUT}s per iteration"
@@ -360,12 +369,19 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   echo "[ITER-$i] Starting Claude process, output to: $TEMP_OUTPUT" >&2
   echo "[ITER-$i] Timeout: ${ITERATION_TIMEOUT}s" >&2
 
+  # Build claude command with optional flags
+  CLAUDE_ARGS=("-p" "$(cat "$SCRIPT_DIR/prompt.md")")
+  CLAUDE_ARGS+=("--output-format" "json")
+  CLAUDE_ARGS+=("--json-schema" "$RESULT_SCHEMA")
+  CLAUDE_ARGS+=("--allowedTools" "Bash,Read,Edit,Write,Glob,Grep,Skill")
+  CLAUDE_ARGS+=("--no-session-persistence")
+  CLAUDE_ARGS+=("--model" "$EXECUTION_MODEL")
+  if [ -n "$FALLBACK_MODEL" ]; then
+    CLAUDE_ARGS+=("--fallback-model" "$FALLBACK_MODEL")
+  fi
+
   # Run with timeout
-  $TIMEOUT_CMD $ITERATION_TIMEOUT claude -p "$(cat "$SCRIPT_DIR/prompt.md")" \
-    --output-format json \
-    --allowedTools "Bash,Read,Edit,Write,Glob,Grep,Skill" \
-    --no-session-persistence \
-    --model "$EXECUTION_MODEL" \
+  $TIMEOUT_CMD $ITERATION_TIMEOUT claude "${CLAUDE_ARGS[@]}" \
     > "$TEMP_OUTPUT" 2>&1 &
 
   # Track PID for cleanup
@@ -404,11 +420,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
       echo "Retrying iteration $i with ${EXTENDED_TIMEOUT}s timeout..."
 
       TEMP_OUTPUT="/tmp/sdk-bridge-$$-$i-retry.txt"
-      $TIMEOUT_CMD $EXTENDED_TIMEOUT claude -p "$(cat "$SCRIPT_DIR/prompt.md")" \
-        --output-format json \
-        --allowedTools "Bash,Read,Edit,Write,Glob,Grep,Skill" \
-        --no-session-persistence \
-        --model "$EXECUTION_MODEL" \
+      $TIMEOUT_CMD $EXTENDED_TIMEOUT claude "${CLAUDE_ARGS[@]}" \
         > "$TEMP_OUTPUT" 2>&1 &
 
       CURRENT_CLAUDE_PID=$!
@@ -430,8 +442,18 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     fi
   fi
 
-  # Extract result from JSON output
+  # Extract structured output (from --json-schema) and text result
+  STRUCTURED_OUTPUT=$(echo "$OUTPUT" | jq -r '.structured_output // empty' 2>/dev/null)
   RESULT=$(echo "$OUTPUT" | jq -r '.result // empty' 2>/dev/null || echo "$OUTPUT")
+
+  # Parse structured status if available
+  STORY_STATUS=""
+  STORY_ID=""
+  if [ -n "$STRUCTURED_OUTPUT" ]; then
+    STORY_STATUS=$(echo "$STRUCTURED_OUTPUT" | jq -r '.status // empty' 2>/dev/null)
+    STORY_ID=$(echo "$STRUCTURED_OUTPUT" | jq -r '.story_id // empty' 2>/dev/null)
+    echo "Story ${STORY_ID:-unknown}: ${STORY_STATUS:-unknown}"
+  fi
 
   # Display result
   echo "$RESULT"
@@ -439,12 +461,24 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   # Append to progress file
   echo "" >> "$PROGRESS_FILE"
   echo "=== Iteration $i $(date) ===" >> "$PROGRESS_FILE"
+  echo "Story: ${STORY_ID:-unknown} Status: ${STORY_STATUS:-unknown}" >> "$PROGRESS_FILE"
   echo "$RESULT" >> "$PROGRESS_FILE"
 
-  # Check for completion signal
+  # Check for all stories complete via prd.json (primary method)
+  if [ -f "$PRD_FILE" ]; then
+    REMAINING=$(jq '[.userStories[] | select(.passes == false)] | length' "$PRD_FILE" 2>/dev/null) || REMAINING=1
+    if [ "$REMAINING" -eq 0 ]; then
+      echo ""
+      echo "All stories complete!"
+      echo "Completed at iteration $i of $MAX_ITERATIONS"
+      exit 0
+    fi
+  fi
+
+  # Legacy fallback: check for COMPLETE promise string
   if echo "$RESULT" | grep -q "<promise>COMPLETE</promise>"; then
     echo ""
-    echo "✓ SDK Bridge completed all tasks!"
+    echo "SDK Bridge completed all tasks!"
     echo "Completed at iteration $i of $MAX_ITERATIONS"
     exit 0
   fi
@@ -452,7 +486,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   # Check for errors
   if echo "$OUTPUT" | jq -e '.is_error' > /dev/null 2>&1; then
     ERROR_MSG=$(echo "$OUTPUT" | jq -r '.result // "Unknown error"')
-    echo "⚠ Warning: Iteration $i encountered an error: $ERROR_MSG"
+    echo "Warning: Iteration $i encountered an error: $ERROR_MSG"
     echo "Continuing to next iteration..."
   fi
 

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Version 5.0.0** | Last Updated: 2026-03-04
+**Version 6.0.0** | Last Updated: 2026-03-07
 
 Developer instructions for the SDK Bridge plugin for Claude Code CLI.
 
@@ -52,13 +52,13 @@ sdk-bridge/
 
 ### Subagents
 
-| Agent | Model | Permission | Purpose |
-|-------|-------|------------|---------|
-| architect | sonnet | dontAsk | Read-only codebase explorer |
-| implementer | inherit | bypassPermissions | Code a single story (TDD + verify) |
-| reviewer | haiku | dontAsk | Spec compliance + validation (two-phase) |
-| code-reviewer | sonnet | dontAsk | Code quality review (opt-in) |
-| merger | haiku | bypassPermissions | Git branch operations |
+| Agent | Model | Permission | Purpose | Isolation | Memory |
+|-------|-------|------------|---------|-----------|--------|
+| architect | sonnet | dontAsk | Read-only codebase explorer | — | project |
+| implementer | inherit | bypassPermissions | Code a single story (TDD + verify) | worktree | project |
+| reviewer | haiku | dontAsk | Spec compliance + validation (two-phase) | — | project |
+| code-reviewer | sonnet | dontAsk | Code quality review (opt-in) | — | project |
+| merger | haiku | bypassPermissions | Git branch operations | — | — |
 
 ### Hooks
 
@@ -67,6 +67,7 @@ sdk-bridge/
 | SessionStart | session-context.sh | Detects active prd.json, reports story progress |
 | PreToolUse (Bash) | check-destructive.sh | Blocks force push, reset --hard, etc. |
 | SubagentStop (implementer) | validate-result.sh | Runs test/build/typecheck commands |
+| PreCompact | inject-prd-context.sh | Re-injects current story + patterns before compaction |
 
 **Note:** SubagentStop hooks fire for native subagents only, NOT for `claude -p` instances from the bash loop. The bash loop uses `prompt.md` for quality checks.
 
@@ -118,6 +119,7 @@ progress.txt                   # Learnings log (append-only)
 | `build_command` | string | "" | e.g. "npm run build" |
 | `typecheck_command` | string | "" | e.g. "tsc --noEmit" |
 | `code_review` | bool | true | Enable code-reviewer after validation |
+| `fallback_model` | string | "" | Fallback model if primary overloaded (e.g. "sonnet") |
 
 **Legacy support:** Falls back to `.claude/sdk-bridge.local.md` (YAML frontmatter) if JSON config not found.
 
@@ -183,6 +185,9 @@ export ANTHROPIC_API_KEY='your-key'
 - Hook scripts run in non-interactive shells — aliases and `.zshrc` not loaded
 - Exit 2 messages must go to stderr; stdout is for structured JSON output
 - SubagentStop hooks only fire for native subagents, not `claude -p` bash loop instances
+- Implementer runs in worktree isolation — file changes are in a temporary copy, merged back on success
+- Agent memory persists in `.claude/agent-memory/<agent-name>/` — check into git for team sharing
+- `--json-schema` enforces structured output; iterations that can't produce valid JSON will fail
 
 ---
 

@@ -8,7 +8,7 @@ tools:
 disallowedTools:
   - Write
   - Edit
-  - Task
+  - Agent
 model: haiku
 permissionMode: bypassPermissions
 maxTurns: 50
