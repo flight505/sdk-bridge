@@ -1,35 +1,33 @@
 #!/bin/bash
-# Dependency checker for SDK Bridge
-# Returns 0 if all dependencies present, 1 if missing
-# Outputs list of missing dependencies to stdout
-
+# Dependency checker for SDK Bridge v7 (Agent Teams)
 set -e
 
 MISSING=()
+WARNINGS=()
 
-# Check for claude CLI (Claude Code)
+# Check for claude CLI
 if ! command -v claude &> /dev/null; then
   MISSING+=("claude")
 fi
 
-# Check for jq (JSON parser)
+# Check for jq
 if ! command -v jq &> /dev/null; then
   MISSING+=("jq")
 fi
 
-# Check for timeout command (GNU coreutils)
-# On macOS with Homebrew coreutils, it's called gtimeout
-# On Linux, it's timeout
-if ! command -v timeout &> /dev/null && ! command -v gtimeout &> /dev/null; then
-  MISSING+=("coreutils")
+# Check Agent Teams enablement
+if [ -z "$CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" ] || [ "$CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" != "1" ]; then
+  WARNINGS+=("agent-teams")
 fi
 
 # Output results
+if [ ${#WARNINGS[@]} -gt 0 ]; then
+  echo "WARNINGS: ${WARNINGS[*]}" >&2
+fi
+
 if [ ${#MISSING[@]} -eq 0 ]; then
-  # All dependencies present
   exit 0
 else
-  # Output missing dependencies (space-separated)
-  echo "${MISSING[@]}"
+  echo "${MISSING[*]}"
   exit 1
 fi
