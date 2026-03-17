@@ -8,12 +8,15 @@ Developer instructions for the SDK Bridge plugin for Claude Code CLI.
 
 ## Overview
 
-SDK Bridge is an **interactive autonomous development assistant** providing a single command (`/sdk-bridge:start`) that:
+SDK Bridge is an **interactive autonomous development assistant** that:
 1. Generates detailed PRDs with clarifying questions
-2. Converts to executable JSON format with dependency graph analysis
-3. Orchestrates Agent Teams for parallel story implementation until all work is complete
+2. Converts to `prd.json` with dependency graph analysis
+3. Acts as team lead — creates tasks, spawns implementer teammates, monitors completion
+4. Runs reviewer and code-reviewer subagents on the full branch diff when done
 
-**Philosophy:** Radical simplicity. One command, interactive wizard, Agent Teams parallelism. Quality enforced through TDD, TaskCompleted validation gates, and two-stage post-completion review.
+**Architecture:** The `/sdk-bridge:start` command IS the orchestrator. It doesn't launch a bash loop — it stays running as team lead throughout the entire Agent Teams execution.
+
+**Philosophy:** Radical simplicity. One command. Parallel execution via Agent Teams. Quality enforced through TDD, `TaskCompleted` validation gates, and two-stage post-completion review.
 
 Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
 
@@ -146,6 +149,12 @@ If the project has `claude-docs-skill` installed in `.claude/skills/`, use it fo
 ### Testing Changes
 
 ```bash
+# Validate hooks.json first
+jq . hooks/hooks.json
+
+# Validate syntax on all hook scripts
+for f in hooks/*.sh; do bash -n "$f" && echo "OK: $f"; done
+
 # Reinstall and test
 /plugin uninstall sdk-bridge@flight505-marketplace
 /plugin install sdk-bridge@flight505-marketplace
