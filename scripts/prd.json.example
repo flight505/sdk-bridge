@@ -14,7 +14,13 @@
       ],
       "priority": 1,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "depends_on": [],
+      "related_to": [],
+      "implementation_hint": "",
+      "check_before_implementing": [
+        "grep -rn 'priority' src/models/"
+      ]
     },
     {
       "id": "US-002",
@@ -28,7 +34,13 @@
       ],
       "priority": 2,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "depends_on": ["US-001"],
+      "related_to": [],
+      "implementation_hint": "Reuse existing badge component if available, just add priority color variants.",
+      "check_before_implementing": [
+        "grep -rn 'Badge\\|badge' src/components/"
+      ]
     },
     {
       "id": "US-003",
@@ -43,7 +55,13 @@
       ],
       "priority": 3,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "depends_on": ["US-001"],
+      "related_to": ["US-002"],
+      "implementation_hint": "US-002 is adding the badge component in parallel — do not depend on it. Focus on the edit modal only.",
+      "check_before_implementing": [
+        "grep -rn 'EditModal\\|edit-modal\\|TaskEdit' src/components/"
+      ]
     },
     {
       "id": "US-004",
@@ -58,7 +76,14 @@
       ],
       "priority": 4,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "depends_on": ["US-002", "US-003"],
+      "related_to": [],
+      "implementation_hint": "US-002 and US-003 must complete first — filter needs the priority field and display to be in place.",
+      "check_before_implementing": [
+        "grep -rn 'filter\\|Filter' src/components/",
+        "grep -rn 'searchParams\\|useSearchParams' src/"
+      ]
     }
   ]
 }
