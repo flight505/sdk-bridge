@@ -2,79 +2,64 @@
 
 ![SDK Bridge Hero](./assets/sdk-bridge-hero.jpg)
 
-[![Version](https://img.shields.io/badge/version-6.0.0-blue.svg)](https://github.com/flight505/sdk-bridge)
+[![Version](https://img.shields.io/badge/version-7.0.0-blue.svg)](https://github.com/flight505/sdk-bridge)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)](https://github.com/anthropics/claude-code)
 
 > **Why "SDK Bridge"?** It bridges the gap between your high-level requirements and autonomous AI execution—transforming human intent into working code through the Claude Code CLI.
 
-Interactive autonomous development assistant that generates PRDs, converts them to execution format, and runs fresh Claude agent loops with quality gates until all work is complete.
+PRD-driven parallel development assistant that generates PRDs, orchestrates Agent Teams for parallel story implementation, and enforces quality through TDD and two-stage review.
 
 Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
 
 ---
 
-## What's New in v6.0.0
+## What's New in v7.0.0
 
-- **Worktree isolation** — Each implementer story runs in an isolated git worktree, no cross-story interference
-- **Structured output** — `--json-schema` enforces validated JSON from every iteration (replaces string parsing)
-- **Fallback model** — Configurable `--fallback-model` for resilience when primary model is overloaded
-- **5 hooks** — Added SubagentStart (inject learnings), PreCompact (preserve context during compaction), PostToolUse (auto-lint)
-- **Advisory code review** — Fresh Sonnet instance reviews each completed story's diff, logged to progress.txt
-- **Agent memory** — `memory: project` on implementer, reviewer, and code-reviewer for cross-session learning
-- **Wider skill triggers** — prd-generator and prd-converter trigger on natural language ("plan this", "run this")
-
-### Previous (v5.0.0)
-
-- 5 subagents — architect, implementer (with TDD), reviewer (two-stage), code-reviewer, merger
-- Failure categorization — Analyzes errors, recommends retry strategy
-- JSON config — `.claude/sdk-bridge.config.json` replaces YAML frontmatter
-- Resume intelligence — Detects completed stories on interrupted runs
-- Quality gates — Test, build, typecheck commands run after each story
+- **Agent Teams orchestration** — Multiple implementer teammates run in parallel, each claiming and implementing independent stories simultaneously
+- **Shared task coordination** — TaskCreate/TaskList/TaskUpdate replace the bash loop; the start command is the team lead
+- **4 Agent Teams hooks** — TaskCompleted (validation gate), TeammateIdle (work guard), SessionStart (context injection), PreCompact (story preservation)
+- **Dependency graph analysis** — prd-converter now outputs parallel groups and suggested teammate count
+- **Simplified config** — Removed iteration/timeout/mode settings; no more bash loop to configure
+- **3 agents** — implementer (teammate), reviewer (full-branch), code-reviewer (full-branch)
+- **progress.jsonl** — Structured JSON lines replace progress.txt for machine-readable pattern sharing
 
 ---
 
 ## Architecture
 
-![SDK Bridge Architecture](./assets/sdk-bridge-architecture.png?v=6.0.0)
-
-SDK Bridge uses a **bash orchestration loop** that spawns fresh Claude CLI instances for each iteration. State persists via:
-- **prd.json** — Source of truth for story completion status
-- **progress.txt** — Append-only log of learnings and patterns
-- **Git commits** — Code changes from previous iterations
-
-Each iteration is a fresh Claude instance with clean context. The bash coordinator reads state files, spawns a new Claude CLI process, and continues until all stories pass or max iterations reached.
+```
+/sdk-bridge:start (team lead)
+    │
+    ├── prd-generator skill    → tasks/prd-feature.md
+    ├── prd-converter skill    → prd.json + dependency graph
+    │
+    ├── TaskCreate (one per story)
+    │
+    ├── Agent Teams (N implementer teammates in parallel)
+    │   ├── teammate 1: claim US-001 → implement → TaskUpdate(completed)
+    │   ├── teammate 2: claim US-002 → implement → TaskUpdate(completed)
+    │   └── teammate N: claim US-003 → implement → TaskUpdate(completed)
+    │
+    ├── reviewer subagent      → full branch diff review
+    └── code-reviewer subagent → full branch code quality (optional)
+```
 
 ### Components
 
 | Component | Count | Purpose |
 |-----------|-------|---------|
-| Commands | 1 | Interactive wizard (`/sdk-bridge:start`) |
-| Skills | 3 | PRD generator, PRD converter, failure analyzer |
-| Agents | 5 | architect, implementer, reviewer, code-reviewer, merger |
-| Hooks | 5 | Context injection, safety checks, validation gates, learnings injection, compaction protection |
-
----
-
-## Interactive Workflow
-
-![SDK Bridge Wizard](./assets/sdk-bridge-wizard.png?v=6.0.0)
-
-SDK Bridge guides you through a **7-checkpoint interactive workflow**:
-
-1. **Dependency Check** — Verifies `claude` CLI, `jq`, and `coreutils`
-2. **Project Input** — Describe your project or provide a file path
-3. **Generate PRD** — Creates structured PRD with clarifying questions
-4. **Review PRD** — Approve, suggest improvements, edit manually, or start over
-5. **Convert to JSON** — Transforms markdown PRD to executable `prd.json`
-6. **Execution Settings** — Iterations, timeout, mode, model, quality commands, code review
-7. **Launch** — Starts the autonomous orchestration loop
+| Commands | 1 | Interactive wizard + team lead orchestrator |
+| Skills | 2 | PRD generator, PRD converter with dependency graph |
+| Agents | 3 | implementer (teammate), reviewer, code-reviewer |
+| Hooks | 4 | TaskCompleted, TeammateIdle, SessionStart, PreCompact |
 
 ---
 
 ## Prerequisites
 
-- [Claude Code CLI](https://code.claude.com)
+- [Claude Code CLI](https://code.claude.com) v2.1.32+
+- Agent Teams enabled: `export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
 - `jq` JSON parser (`brew install jq` on macOS)
 - Git repository for your project
 - Authentication (OAuth token or API key)
@@ -107,33 +92,47 @@ export ANTHROPIC_API_KEY='your-key'
 ## Quick Start
 
 ```bash
+# Enable Agent Teams
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+
 # Run the interactive wizard
 /sdk-bridge:start
 ```
 
-That's it! SDK Bridge will guide you through PRD generation, review, configuration, and launch.
+That's it. SDK Bridge guides you through PRD generation, review, configuration, and launches an Agent Teams parallel execution.
 
 ---
 
 ## How It Works
 
-### The Loop
+### The Flow
 
 ```
-for iteration in 1..max_iterations:
-  1. Read prd.json to find next story where "passes": false
-  2. Spawn fresh Claude instance (isolated worktree, clean context)
-  3. Claude implements ONE story:
-     - Check for existing implementation first
-     - Implement with TDD discipline
-     - Auto-lint after each edit (PostToolUse hook)
-     - Run quality checks (test, build, typecheck)
-     - Commit if checks pass
-     - Update prd.json to mark story complete
-     - Append learnings to progress.txt
-  4. Parse structured JSON output (status, story_id, error_category)
-  5. Run advisory code review (Sonnet, if enabled)
-  6. If all stories pass, exit; otherwise continue
+1. PRD Generation
+   → Clarifying questions → tasks/prd-feature.md
+
+2. PRD Review
+   → Approve, improve, edit, or regenerate
+
+3. JSON Conversion
+   → prd.json + dependency graph analysis
+   → "Group 1: US-001 | Group 2: US-002, US-003 (parallel) | Group 3: US-004"
+   → Suggested teammate count: 2
+
+4. Agent Teams Execution
+   → git checkout -b sdk-bridge/feature
+   → TaskCreate for each story
+   → Spawn N implementer teammates
+   → Teammates claim stories, implement with TDD, commit, mark complete
+   → TaskCompleted hook validates after each story (test/build/typecheck)
+   → TeammateIdle hook prevents early shutdown while work remains
+
+5. Post-Completion Review
+   → reviewer subagent: full branch diff vs all acceptance criteria
+   → code-reviewer subagent: architecture, security, types, tests (optional)
+
+6. Done
+   → prd.json marked complete → progress.jsonl updated → report to user
 ```
 
 ### Key Files
@@ -142,8 +141,8 @@ for iteration in 1..max_iterations:
 |------|---------|
 | `prd.json` | Task list with execution status (source of truth) |
 | `tasks/prd-[feature].md` | Human-readable PRD |
-| `progress.txt` | Append-only learnings log |
-| `.claude/sdk-bridge.config.json` | Configuration (JSON) |
+| `progress.jsonl` | Append-only learnings log (JSON lines, machine-readable) |
+| `.claude/sdk-bridge.config.json` | Configuration |
 
 ---
 
@@ -153,65 +152,36 @@ Created automatically by the wizard, or edit `.claude/sdk-bridge.config.json`:
 
 ```json
 {
-  "max_iterations": 20,
-  "iteration_timeout": 3600,
-  "execution_mode": "foreground",
-  "execution_model": "opus",
-  "effort_level": "high",
+  "max_teammates": 5,
   "branch_prefix": "sdk-bridge",
   "test_command": "npm test",
   "build_command": "npm run build",
   "typecheck_command": "tsc --noEmit",
-  "code_review": true,
-  "fallback_model": "sonnet"
+  "code_review": true
 }
 ```
 
-**Model Selection:**
-- **Sonnet 4.5** — Fast and efficient, good for most tasks
-- **Opus 4.6 (high effort)** — Best quality, adaptive reasoning, 128K output
-- **Opus 4.6 (medium effort)** — Opus quality at 76% fewer tokens
-
-**Planning phase:** Set `export CLAUDE_CODE_SUBAGENT_MODEL=opus` for best PRD quality.
-
----
-
-## Foreground vs Background
-
-**Foreground (default):**
-- See live output as Claude works
-- Easy to stop with Ctrl+C
-
-**Background:**
-- Runs in background, you continue working
-- Check progress: `tail -f .claude/sdk-bridge.log`
-- Stop: `kill $(cat .claude/sdk-bridge.pid)`
+| Field | Default | Description |
+|-------|---------|-------------|
+| `max_teammates` | 5 | Maximum concurrent implementer teammates |
+| `branch_prefix` | "sdk-bridge" | Git branch prefix |
+| `test_command` | "" | Run after each story completion |
+| `build_command` | "" | Run after each story completion |
+| `typecheck_command` | "" | Run after each story completion |
+| `code_review` | true | Run code-reviewer after all stories complete |
 
 ---
 
 ## Quality Gates
 
-SDK Bridge v6 enforces quality at multiple levels:
+SDK Bridge v7 enforces quality through:
 
-- **Worktree isolation** — Each story runs in an isolated git worktree, no cross-story interference
-- **TDD discipline** — Implementer writes tests before implementation
-- **Auto-lint on edit** — PostToolUse hook runs typecheck after every Edit/Write (interactive path)
-- **Automated checks** — Test, build, typecheck commands run after each story
-- **Structured output** — `--json-schema` validates every iteration returns proper status/results
-- **Advisory code review** — Fresh Sonnet instance reviews completed story diffs (logged, non-blocking)
-- **Two-stage review** — Spec compliance (reviewer) then code quality (code-reviewer)
-- **Failure categorization** — Errors are analyzed and retried with appropriate strategy
-- **Context preservation** — PreCompact hook re-injects story context before compaction
-- **Resume intelligence** — Interrupted runs detect and skip completed stories
-
----
-
-## Tips for Success
-
-1. **Small stories** — Each should complete in one Claude context window
-2. **Quality checks** — Configure test/build/typecheck commands for automatic validation
-3. **Verification commands** — Include specific verification in acceptance criteria
-4. **Progress.txt patterns** — Learnings carry forward between iterations
+- **TDD discipline** — Implementers write tests before implementation (RED-GREEN-REFACTOR)
+- **TaskCompleted hook** — Runs test/build/typecheck after each story; blocks completion on failure
+- **TeammateIdle hook** — Prevents teammates from stopping while incomplete stories remain
+- **Pattern sharing** — Implementers append discoveries to progress.jsonl; teammates share codebase knowledge
+- **Two-stage review** — Spec compliance (reviewer) then code quality (code-reviewer) on full branch diff
+- **Dependency enforcement** — Stories with `depends_on` cannot be claimed until dependencies complete
 
 ---
 
@@ -221,14 +191,17 @@ SDK Bridge v6 enforces quality at multiple levels:
 # See which stories are done
 cat prd.json | jq '.userStories[] | {id, title, passes}'
 
-# View learnings
-cat progress.txt
+# View learnings and patterns
+cat progress.jsonl | jq .
 
 # Check git history
 git log --oneline -10
 
-# Monitor live (background mode)
-tail -f .claude/sdk-bridge.log
+# Check for incomplete run
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/watchdog.sh
+
+# Verify dependencies
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/check-deps.sh
 ```
 
 ---
@@ -236,6 +209,7 @@ tail -f .claude/sdk-bridge.log
 ## References
 
 - [Claude Code CLI](https://code.claude.com/docs/en/cli-reference.md)
+- [Claude Code Agent Teams](https://code.claude.com/docs/en/agent-teams.md)
 - [Geoffrey Huntley's Ralph](https://ghuntley.com/ralph/)
 - [Claude Code Plugins](https://github.com/anthropics/claude-code)
 
