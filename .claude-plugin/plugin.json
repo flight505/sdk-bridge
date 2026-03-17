@@ -1,7 +1,7 @@
 {
   "name": "sdk-bridge",
-  "version": "6.0.1",
-  "description": "PRD-driven autonomous development — generates PRDs, converts to execution format, runs fresh Claude instances with quality gates until complete. Two-stage review, TDD enforcement, failure categorization.",
+  "version": "7.0.0",
+  "description": "PRD-driven parallel development — generates PRDs, orchestrates Agent Teams for parallel story implementation with shared task coordination, two-stage review, and TDD enforcement.",
   "author": {
     "name": "Jesper Vang",
     "email": "jesper_vang@me.com",
@@ -12,11 +12,10 @@
   "homepage": "https://github.com/flight505/sdk-bridge",
   "keywords": [
     "claude-cli",
-    "autonomous",
+    "agent-teams",
     "prd",
-    "agent-loop",
-    "long-running",
-    "interactive",
+    "parallel",
+    "autonomous",
     "tdd",
     "code-review"
   ],
@@ -25,14 +24,11 @@
   ],
   "skills": [
     "./skills/prd-generator",
-    "./skills/prd-converter",
-    "./skills/failure-analyzer"
+    "./skills/prd-converter"
   ],
   "agents": [
-    "./agents/architect.md",
     "./agents/implementer.md",
     "./agents/reviewer.md",
-    "./agents/code-reviewer.md",
-    "./agents/merger.md"
+    "./agents/code-reviewer.md"
   ]
 }
