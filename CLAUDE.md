@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Version 6.0.0** | Last Updated: 2026-03-07
+**Version 7.0.0** | Last Updated: 2026-03-17
 
 Developer instructions for the SDK Bridge plugin for Claude Code CLI.
 
@@ -10,10 +10,10 @@ Developer instructions for the SDK Bridge plugin for Claude Code CLI.
 
 SDK Bridge is an **interactive autonomous development assistant** providing a single command (`/sdk-bridge:start`) that:
 1. Generates detailed PRDs with clarifying questions
-2. Converts to executable JSON format
-3. Runs fresh Claude agent loops with quality gates until all work is complete
+2. Converts to executable JSON format with dependency graph analysis
+3. Orchestrates Agent Teams for parallel story implementation until all work is complete
 
-**Philosophy:** Radical simplicity. One command, interactive wizard, fresh Claude instances each iteration. Quality enforced through TDD, two-stage review, and failure categorization.
+**Philosophy:** Radical simplicity. One command, interactive wizard, Agent Teams parallelism. Quality enforced through TDD, TaskCompleted validation gates, and two-stage post-completion review.
 
 Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
 
@@ -24,69 +24,81 @@ Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
 ```
 sdk-bridge/
 ├── .claude-plugin/plugin.json        # Plugin manifest
-├── agents/                            # 5 subagents
-│   ├── architect.md                   # Read-only codebase explorer
-│   ├── implementer.md                 # Code a single story (TDD + verify)
-│   ├── reviewer.md                    # Spec compliance + validation (two-phase)
-│   ├── code-reviewer.md              # Code quality review (opt-in)
-│   └── merger.md                      # Git branch operations
+├── agents/                            # 3 agents
+│   ├── implementer.md                 # Teammate: claim, code, commit, share
+│   ├── reviewer.md                    # Full-branch spec compliance review
+│   └── code-reviewer.md              # Full-branch code quality review
 ├── commands/
-│   └── start.md                       # Interactive wizard (7 checkpoints)
+│   └── start.md                       # Interactive wizard + team lead orchestrator
 ├── skills/
 │   ├── prd-generator/                 # PRD creation with clarifying questions
-│   ├── prd-converter/                 # Markdown -> JSON converter
-│   └── failure-analyzer/              # Error categorization + retry strategy
+│   └── prd-converter/                 # Markdown → JSON + dependency graph
 ├── hooks/
-│   ├── hooks.json                     # 3 hooks across 3 events
-│   ├── session-context.sh             # SessionStart: inject prd.json awareness
-│   ├── check-destructive.sh           # PreToolUse: block dangerous commands
-│   └── validate-result.sh             # SubagentStop: test/build/typecheck gate
-├── scripts/
-│   ├── sdk-bridge.sh                  # Main bash loop
-│   ├── prompt.md                      # Instructions for each Claude iteration
-│   ├── check-deps.sh                  # Dependency checker
-│   ├── check-git.sh                   # Git repository diagnostics
-│   └── prd.json.example              # Reference format
-└── examples/                          # Example PRDs
+│   ├── hooks.json                     # 4 hooks across 4 events
+│   ├── validate-task.sh               # TaskCompleted: test/build/typecheck gate
+│   ├── check-idle.sh                  # TeammateIdle: prevents early shutdown
+│   ├── inject-context.sh              # SessionStart: injects PRD status
+│   └── preserve-context.sh            # PreCompact: re-injects story context
+└── scripts/
+    ├── check-deps.sh                  # Dependency checker (claude, jq, agent-teams)
+    ├── watchdog.sh                    # Crash recovery guide
+    └── prd.json.example              # Reference format with parallel execution
 ```
 
-### Subagents
+### Agents
 
-| Agent | Model | Permission | Purpose | Isolation | Memory |
-|-------|-------|------------|---------|-----------|--------|
-| architect | sonnet | dontAsk | Read-only codebase explorer | — | project |
-| implementer | inherit | bypassPermissions | Code a single story (TDD + verify) | worktree | project |
-| reviewer | haiku | dontAsk | Spec compliance + validation (two-phase) | — | project |
-| code-reviewer | sonnet | dontAsk | Code quality review (opt-in) | — | project |
-| merger | haiku | bypassPermissions | Git branch operations | — | — |
+| Agent | Role | Model | Permission | Purpose |
+|-------|------|-------|------------|---------|
+| implementer | teammate | inherit | bypassPermissions | Claim tasks, TDD, commit, share patterns |
+| reviewer | subagent | haiku | dontAsk | Post-completion full-branch spec compliance |
+| code-reviewer | subagent | sonnet | dontAsk | Post-completion full-branch code quality |
 
 ### Hooks
 
 | Event | Script | Purpose |
 |-------|--------|---------|
-| SessionStart | session-context.sh | Detects active prd.json, reports story progress |
-| PreToolUse (Bash) | check-destructive.sh | Blocks force push, reset --hard, etc. |
-| SubagentStart (implementer) | inject-learnings.sh | Injects codebase patterns from progress.txt into agent context |
-| SubagentStop (implementer) | validate-result.sh | Runs test/build/typecheck commands |
-| PreCompact | inject-prd-context.sh | Re-injects current story + patterns before compaction |
-
-The implementer agent also has an inline `PostToolUse` hook (`auto-lint.sh`) that runs the project's typecheck command after every Edit/Write during interactive sessions.
-
-**Note:** SubagentStop hooks fire for native subagents only, NOT for `claude -p` instances from the bash loop. The bash loop uses `prompt.md` for quality checks.
+| SessionStart | inject-context.sh | Injects PRD progress into session context |
+| TaskCompleted | validate-task.sh | Runs test/build/typecheck; exit 2 blocks completion |
+| TeammateIdle | check-idle.sh | Prevents teammates from stopping while stories remain |
+| PreCompact | preserve-context.sh | Re-injects current story + patterns before compaction |
 
 ### State Files (User's Project)
 
 ```
 .claude/
-├── sdk-bridge.config.json     # Config (JSON)
-├── sdk-bridge-{branch}.pid   # Per-branch PID file
-└── sdk-bridge.log             # Background mode log
+└── sdk-bridge.config.json     # Config (JSON)
 
 tasks/
 └── prd-{feature}.md           # Human-readable PRD
 
 prd.json                       # Execution format (source of truth)
-progress.txt                   # Learnings log (append-only)
+progress.jsonl                 # Learnings log (append-only, JSON lines)
+```
+
+---
+
+## Execution Flow
+
+```
+/sdk-bridge:start
+  → Checkpoint 1: check-deps.sh (claude, jq, CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)
+  → Checkpoint 2: User describes project
+  → Checkpoint 3: prd-generator skill → tasks/prd-feature.md
+  → Checkpoint 4: User reviews and approves PRD
+  → Checkpoint 5: prd-converter skill → prd.json + dependency graph
+  → Checkpoint 6: Configure quality commands + code review
+  → Orchestration:
+      git checkout -b [branchName]
+      TaskCreate for each story
+      Agent Teams: N implementer teammates in parallel
+        teammate: TaskList → claim → implement (TDD) → commit → TaskUpdate(completed)
+        validate-task.sh fires on TaskCompleted → test/build/typecheck gate
+        check-idle.sh fires on TeammateIdle → blocks if stories remain
+      Wait for all tasks → completed
+      Spawn reviewer subagent → full branch diff review
+      Spawn code-reviewer subagent (if enabled) → full branch quality review
+      prd.json: all passes = true
+      progress.jsonl: final summary entry
 ```
 
 ---
@@ -97,11 +109,7 @@ progress.txt                   # Learnings log (append-only)
 
 ```json
 {
-  "max_iterations": 20,
-  "iteration_timeout": 3600,
-  "execution_mode": "foreground",
-  "execution_model": "opus",
-  "effort_level": "high",
+  "max_teammates": 5,
   "branch_prefix": "sdk-bridge",
   "test_command": "npm test",
   "build_command": "npm run build",
@@ -112,19 +120,12 @@ progress.txt                   # Learnings log (append-only)
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `max_iterations` | number | 20 | Stop after N iterations |
-| `iteration_timeout` | number | 3600 | Timeout per iteration (seconds) |
-| `execution_mode` | string | "foreground" | "foreground" or "background" |
-| `execution_model` | string | "sonnet" | "sonnet" or "opus" |
-| `effort_level` | string | "" | "low", "medium", "high" (Opus only) |
+| `max_teammates` | number | 5 | Maximum concurrent implementer teammates |
 | `branch_prefix` | string | "sdk-bridge" | Git branch prefix |
 | `test_command` | string | "" | e.g. "npm test" |
 | `build_command` | string | "" | e.g. "npm run build" |
 | `typecheck_command` | string | "" | e.g. "tsc --noEmit" |
-| `code_review` | bool | true | Enable code-reviewer after validation |
-| `fallback_model` | string | "" | Fallback model if primary overloaded (e.g. "sonnet") |
-
-**Legacy support:** Falls back to `.claude/sdk-bridge.local.md` (YAML frontmatter) if JSON config not found.
+| `code_review` | bool | true | Enable code-reviewer after all stories complete |
 
 ---
 
@@ -136,11 +137,11 @@ If the project has `claude-docs-skill` installed in `.claude/skills/`, use it fo
 
 ### Modifying Components
 
-- **Agents** — YAML frontmatter defines tools, model, permissionMode, maxTurns. Keep tool lists minimal (least privilege). Use `haiku` for cheap/fast, `sonnet` for quality, `inherit` for user's model.
+- **Agents** — YAML frontmatter defines tools, model, permissionMode, maxTurns. Implementer is a teammate (no worktree isolation, has Task tools). Reviewer and code-reviewer are subagents (read-only, review full branch diff).
 - **Skills** — Single responsibility. Lettered options (A, B, C, D) for questions.
-- **Hooks** — `${CLAUDE_PLUGIN_ROOT}` resolves to install path. Scripts must be `chmod +x`. Sync hooks need `statusMessage` and `timeout`.
+- **Hooks** — `${CLAUDE_PLUGIN_ROOT}` resolves to install path. Scripts must be `chmod +x`. Sync hooks need `statusMessage` and `timeout`. `TaskCompleted` and `TeammateIdle` are Agent Teams events.
 - **Scripts** — `set -e` for fail-fast. Bash 3.2 compatible (no `declare -A`). `jq` is the only JSON parser.
-- **Commands** — Use `AskUserQuestion` at decision points. Follow 7-checkpoint structure.
+- **Commands** — Use `AskUserQuestion` at decision points. The start command is both wizard and team lead orchestrator.
 
 ### Testing Changes
 
@@ -148,7 +149,8 @@ If the project has `claude-docs-skill` installed in `.claude/skills/`, use it fo
 # Reinstall and test
 /plugin uninstall sdk-bridge@flight505-marketplace
 /plugin install sdk-bridge@flight505-marketplace
-# Restart Claude Code, then:
+# Enable Agent Teams, then:
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 /sdk-bridge:start
 ```
 
@@ -165,21 +167,9 @@ If the project has `claude-docs-skill` installed in `.claude/skills/`, use it fo
 
 ---
 
-## Authentication
-
-```bash
-# OAuth (recommended for Max subscribers)
-claude setup-token
-export CLAUDE_CODE_OAUTH_TOKEN='your-token'
-
-# API key (fallback)
-export ANTHROPIC_API_KEY='your-key'
-```
-
----
-
 ## Gotchas
 
+- **Agent Teams is experimental** — requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
 - Shell scripts must be **bash 3.2 compatible** — no `declare -A`, no bash 4+ features
 - `jq` is the only JSON parser — no yq or Python for JSON
 - `hooks/hooks.json` is **auto-discovered** — never add `"hooks"` field to plugin.json
@@ -187,10 +177,10 @@ export ANTHROPIC_API_KEY='your-key'
 - `set -e` + `[ cond ] && action` at end of function = silent crash — use `if/then/fi`
 - Hook scripts run in non-interactive shells — aliases and `.zshrc` not loaded
 - Exit 2 messages must go to stderr; stdout is for structured JSON output
-- SubagentStop hooks only fire for native subagents, not `claude -p` bash loop instances
-- Implementer runs in worktree isolation — file changes are in a temporary copy, merged back on success
-- Agent memory persists in `.claude/agent-memory/<agent-name>/` — check into git for team sharing
-- `--json-schema` enforces structured output; iterations that can't produce valid JSON will fail
+- Implementer runs as a teammate with shared filesystem — no worktree isolation
+- Teammates coordinate via TaskList/TaskUpdate — they do NOT share memory directly
+- progress.jsonl replaces progress.txt — use JSON lines format for machine-readability
+- Token cost: parallel teammates multiply token usage; `max_teammates` controls this
 
 ---
 
@@ -203,14 +193,17 @@ cat ~/.claude/plugins/installed_plugins.json | jq '.plugins | keys'
 # Verify plugin structure
 ls -la ~/.claude/plugins/cache/flight505-marketplace/sdk-bridge/*/
 
-# Test script directly
-bash scripts/sdk-bridge.sh 1
+# Check for incomplete run
+bash scripts/watchdog.sh
 
 # Verify dependencies
 bash scripts/check-deps.sh
 
 # Validate hooks.json
 jq . hooks/hooks.json
+
+# Check story status
+cat prd.json | jq '.userStories[] | {id, title, passes}'
 ```
 
 ---
@@ -218,9 +211,8 @@ jq . hooks/hooks.json
 ## References
 
 - [Claude Code CLI](https://code.claude.com/docs/en/cli-reference.md)
-- [Claude Code Headless Mode](https://code.claude.com/docs/en/headless.md)
+- [Claude Code Agent Teams](https://code.claude.com/docs/en/agent-teams.md)
 - [Claude Code Hooks](https://code.claude.com/docs/en/hooks.md)
-- [Claude Code Subagents](https://code.claude.com/docs/en/sub-agents.md)
 - [Plugin Development](https://github.com/anthropics/claude-code/blob/main/docs/plugins.md)
 - [Geoffrey Huntley's Ralph](https://ghuntley.com/ralph/)
 
