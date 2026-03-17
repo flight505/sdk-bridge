@@ -2,52 +2,36 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume|clear|compact",
+        "matcher": "startup|resume",
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/session-context.sh",
-            "timeout": 5000,
-            "async": false
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/inject-context.sh",
+            "timeout": 5000
           }
         ]
       }
     ],
-    "PreToolUse": [
+    "TaskCompleted": [
       {
-        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/check-destructive.sh",
-            "timeout": 3000,
-            "statusMessage": "Checking command safety..."
-          }
-        ]
-      }
-    ],
-    "SubagentStart": [
-      {
-        "matcher": "implementer",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/inject-learnings.sh",
-            "timeout": 5000,
-            "statusMessage": "Loading codebase patterns..."
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "matcher": "implementer",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/validate-result.sh",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/validate-task.sh",
             "timeout": 120000,
-            "statusMessage": "Running validation checks..."
+            "statusMessage": "Validating story completion..."
+          }
+        ]
+      }
+    ],
+    "TeammateIdle": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/check-idle.sh",
+            "timeout": 5000,
+            "statusMessage": "Checking teammate status..."
           }
         ]
       }
@@ -57,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/inject-prd-context.sh",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/preserve-context.sh",
             "timeout": 5000
           }
         ]
