@@ -73,7 +73,7 @@ Each story needs:
 - **Dependencies:** *(Optional)* Which stories must complete first
 - **Implementation Hint:** *(Optional)* Guidance for developer/agent
 
-Each story should be small enough to implement in one focused session (typically 10-20 minutes of work).
+Each story should be self-contained for one teammate to implement in a single session. Stories may execute in parallel — ensure acceptance criteria are independently verifiable without relying on in-progress work from another teammate.
 
 **Story Size Threshold:**
 - **Simple features** (≤4 acceptance criteria): Create ONE full-stack story combining UI + backend
