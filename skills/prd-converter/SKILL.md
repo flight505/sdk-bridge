@@ -5,7 +5,7 @@ description: "Convert markdown PRDs into prd.json execution format for SDK Bridg
 
 # SDK Bridge PRD Converter
 
-Converts existing PRDs to the prd.json format that SDK Bridge uses for autonomous execution.
+Converts existing PRDs to the prd.json format that SDK Bridge uses for Agent Teams execution.
 
 ---
 
@@ -61,9 +61,9 @@ Take a PRD (markdown file or text) and convert it to `prd.json` in your project 
 
 ## Story Size: The Number One Rule
 
-**Each story must be completable in ONE SDK Bridge iteration (one context window).**
+**Each story should be independently implementable by one teammate in a single session.**
 
-SDK Bridge spawns a fresh Claude instance per iteration with no memory of previous work. If a story is too big, the LLM runs out of context before finishing and produces broken code.
+SDK Bridge uses Agent Teams — multiple teammates run in parallel, each claiming and implementing one story at a time. Stories must be self-contained: a teammate implementing US-003 cannot rely on in-progress work from another teammate implementing US-002.
 
 ### Right-sized stories (3-5 criteria):
 **Data Layer:**
@@ -400,7 +400,28 @@ Add ability to mark tasks with different statuses.
    - Copy current `prd.json` and `progress.txt` to archive
    - Reset `progress.txt` with fresh header
 
-**The sdk-bridge.sh script handles this automatically** when you run it, but if you are manually updating prd.json between runs, archive first.
+If you are manually updating prd.json between runs, archive first.
+
+---
+
+## Dependency Graph Output
+
+After writing prd.json, output a dependency analysis to help the team lead decide how many teammates to spawn:
+
+```
+## Dependency Graph
+
+Parallel groups (can run simultaneously):
+- Group 1: US-001 (no deps)
+- Group 2: US-002, US-003 (depend on US-001, independent of each other)
+- Group 3: US-004 (depends on US-002, US-003)
+
+Suggested teammate count: 2 (max parallelism in Group 2)
+
+Total stories: 4 | Parallelizable: 2 | Sequential: 2
+```
+
+This helps the start command calculate `min(max_teammates, max_parallel_group_size)`.
 
 ---
 
@@ -409,9 +430,10 @@ Add ability to mark tasks with different statuses.
 Before writing prd.json, verify:
 
 - [ ] **Previous run archived** (if prd.json exists with different branchName, archive it first)
-- [ ] Each story is completable in one iteration (small enough)
+- [ ] Each story is independently implementable by one teammate (self-contained)
 - [ ] Stories are ordered by dependency (schema to backend to UI)
 - [ ] Every story has "Typecheck passes" as criterion
 - [ ] UI stories have "Verify in browser using dev-browser skill" as criterion
 - [ ] Acceptance criteria are verifiable (not vague)
 - [ ] No story depends on a later story
+- [ ] Output dependency graph analysis after saving
