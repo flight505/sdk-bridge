@@ -1,7 +1,7 @@
 ---
-description: "Start SDK Bridge interactive wizard - generates PRD, converts to JSON, and runs autonomous agent loop"
+description: "Start SDK Bridge — generates PRD, converts to JSON, orchestrates Agent Teams for parallel implementation"
 argument-hint: ""
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Task", "AskUserQuestion", "TodoWrite"]
+allowed-tools: ["Bash", "Read", "Write", "Edit", "AskUserQuestion", "Agent", "TaskCreate", "TaskGet", "TaskList", "TaskUpdate"]
 ---
 
 # SDK Bridge Start
@@ -11,369 +11,228 @@ Interactive wizard that guides you through the complete SDK Bridge workflow:
 2. Describe your project/feature
 3. Generate PRD with clarifying questions
 4. Review and approve PRD
-5. Convert to execution format
-6. Configure execution settings
-7. Launch autonomous agent loop
+5. Convert to JSON and analyze dependency graph
+6. Configure quality settings
+7. Orchestrate Agent Teams for parallel implementation
 
 ## Execution
 
 **Checkpoint 1: Check Dependencies**
 
-First, verify required dependencies are installed:
-
+Run:
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/check-deps.sh
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/check-deps.sh
 ```
 
-If dependencies are missing, use AskUserQuestion:
+If `claude` or `jq` is missing, use AskUserQuestion:
 
-Question: "SDK Bridge requires these tools: [list missing]. Install automatically?"
-- Header: "Install"
-- multiSelect: false
-- Options:
-  - Label: "Yes - install for me" | Description: "Automatically install missing dependencies"
-  - Label: "No - I'll install manually" | Description: "Show installation instructions and exit"
+Question: "SDK Bridge requires: [list missing]. Install automatically?"
+- Options: "Yes - install for me" | "No - I'll install manually"
 
-If user approves automatic install:
-- For claude CLI: Explain that the `claude` command comes with Claude Code and should already be available. If not found, the user may need to reinstall Claude Code or add it to their PATH.
-- For jq on macOS: `brew install jq`
-- For jq on Linux: Show instructions for apt/yum (e.g., `sudo apt-get install jq` or `sudo yum install jq`)
-- For coreutils on macOS: `brew install coreutils` (provides gtimeout command for iteration timeouts)
-- For coreutils on Linux: Usually pre-installed; if missing: `sudo apt-get install coreutils` or `sudo yum install coreutils`
+If missing `jq` on macOS: `brew install jq`
+If missing `jq` on Linux: `sudo apt-get install jq`
+The `claude` command comes with Claude Code — if missing, reinstall Claude Code.
 
-If user declines or install fails, show manual installation instructions and exit.
+If check-deps.sh outputs a WARNING about `agent-teams`, display:
 
-**Optional: Optimize Planning Quality**
+```
+Agent Teams is not enabled. To enable:
 
-For best results, configure Opus for PRD generation (Steps 3 & 5 use subagents):
+  export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
-```bash
-# Add to ~/.zshrc or ~/.bashrc
-export CLAUDE_CODE_SUBAGENT_MODEL=opus
+Add to your ~/.zshrc or ~/.bashrc and restart your terminal, then run /sdk-bridge:start again.
 ```
 
-This makes the PRD generator and converter use Opus 4.6 (the latest, with adaptive reasoning) for superior planning. The planning phase only runs once, so the cost is minimal. Restart your terminal after adding this.
+Exit if agent-teams is not enabled — SDK Bridge v7 requires it.
 
 **Checkpoint 2: Project Input**
 
-Ask the user directly for their project description:
+Ask: "What would you like to build? Describe your project or provide a file path to an existing spec (e.g., ~/docs/spec.md or ./tasks/plan.md)."
 
-"What would you like to build? Describe your project or provide a file path to an existing spec (e.g., ~/docs/spec.md or ./tasks/plan.md)."
-
-Then wait for the user's response in the chat.
-
-**After receiving response:**
-- Store the user's message content in variable `user_input`
-- Check if `user_input` looks like a file path:
-  - Starts with `~/`, `./`, `/`, or `../`
-  - OR ends with common extensions: `.md`, `.txt`, `.pdf`
-- If it looks like a file path:
-  - Expand `~` to user's home directory if needed
-  - Use Read tool to read the file
-  - If file exists: Store content as `project_input` and proceed to Checkpoint 3
-  - If file doesn't exist: Show error and ask user to provide the description directly
-- If it's not a file path:
-  - Use `user_input` directly as `project_input`
-
-**If input insufficient (less than 20 words and no file read):**
-
-Conduct a smart interview to gather REQUIRED information:
-
-1. **Project Type (REQUIRED)**: Ask "What type of project is this?"
-   - Examples: web app, API, CLI tool, mobile app, library, script, etc.
-
-2. **Main Functionality (REQUIRED)**: Ask "What's the core functionality or purpose?"
-   - What problem does it solve?
-   - What should users be able to do?
-
-3. **Technical Preferences (optional)**: Ask if relevant:
-   - "Any specific language, framework, or stack preferences?"
-   - "Any existing systems this needs to integrate with?"
-
-4. **Scale/Complexity (optional)**: Ask if needed for context:
-   - "Is this a small feature, medium project, or large system?"
-
-**When to proceed:**
-- Once you have clear answers to both REQUIRED items (project type + main functionality), proceed automatically to Checkpoint 3
-- No need to ask "do you have enough?" - use your judgment
-- If user provides very detailed initial input (>50 words), skip interview entirely
-
-**Example interview flow:**
-```
-User: "Build an auth system"  [insufficient]
-You: "What type of project is this? (web app, API, mobile app, etc.)"
-User: "It's a REST API"
-You: "What's the core functionality? What should users be able to do with authentication?"
-User: "User registration, login with email/password, JWT tokens"
-[You now have: type=API, functionality=auth with registration/login/JWT]
-→ Proceed to Checkpoint 3 automatically
-```
-
-- Proceed to Checkpoint 3
+Wait for user response, then:
+- If response looks like a file path (starts with `~/`, `./`, `/` or ends with `.md`, `.txt`): Read it
+- If response is less than 20 words: Conduct smart interview (project type + core functionality)
+- Otherwise: Use response directly as `project_input`
 
 **Checkpoint 3: Generate PRD**
 
-Load the `prd-generator` skill using Task tool:
+Invoke the `prd-generator` skill:
 ```
-Use the prd-generator skill to create a PRD based on the user's input: [user's description]
+Use the prd-generator skill to create a PRD based on: [project_input]
 ```
 
-The skill will:
-- Ask 3-5 clarifying questions with lettered options
-- Generate structured PRD
-- Save to `tasks/prd-[feature-name].md`
+The skill asks 3-5 clarifying questions, generates a structured PRD, and saves to `tasks/prd-[feature-name].md`.
 
 **Checkpoint 4: Review PRD**
-
-Open the PRD file with the default editor:
-- Run `open tasks/prd-[feature-name].md` to open with default app
 
 Use AskUserQuestion:
 
 Question: "Review the PRD in `tasks/prd-[feature-name].md`. Ready to proceed?"
 - Header: "PRD Review"
-- multiSelect: false
 - Options:
-  - Label: "Approved - convert to JSON" | Description: "PRD looks good, proceed to execution format"
-  - Label: "Suggest improvements" | Description: "Have Claude review and suggest enhancements"
-  - Label: "Need edits - I'll edit" | Description: "Let me edit the file manually, then ask again"
-  - Label: "Start over" | Description: "Regenerate PRD from scratch"
-
-**After collecting answer:**
-
-- **If "Approved - convert to JSON"**: Proceed to Checkpoint 5
-
-- **If "Suggest improvements"**:
-  1. Read the PRD file with Read tool
-  2. Analyze the PRD for potential improvements:
-     - Missing edge cases or error scenarios
-     - Additional features that complement the core functionality
-     - Acceptance criteria that could be more specific or testable
-     - Dependencies between stories that weren't captured
-     - Security, performance, or accessibility considerations
-  3. Present findings to user conversationally:
-     - "I've reviewed the PRD. Here are some suggestions:"
-     - List 3-5 specific improvements with brief rationale
-     - Ask conversationally: "Would you like me to update the PRD with these improvements?"
-  4. Wait for user response in chat
-  5. If user approves suggestions:
-     - Update the PRD file with improvements using Edit tool
-     - Display: "PRD updated with improvements"
-  6. **Return to the beginning of Checkpoint 4**: Use AskUserQuestion again with the same 4 options (this creates a loop - user can approve improved PRD, request more improvements, manually edit, or start over)
-
-- **If "Need edits - I'll edit"**:
-  1. Pause and display "Make your edits to tasks/prd-[feature-name].md and let me know when ready."
-  2. Wait for user confirmation in chat
-  3. **Return to the beginning of Checkpoint 4**: Use AskUserQuestion again with the same 4 options
-
-- **If "Start over"**: Return to Checkpoint 2
+  - "Approved - convert to JSON" → proceed to Checkpoint 5
+  - "Suggest improvements" → Claude reviews and suggests, then return to Checkpoint 4
+  - "Need edits - I'll edit" → wait for user, then return to Checkpoint 4
+  - "Start over" → return to Checkpoint 2
 
 **Checkpoint 5: Convert to JSON**
 
-Load the `prd-converter` skill using Task tool:
+Invoke the `prd-converter` skill:
 ```
 Use the prd-converter skill to convert tasks/prd-[feature-name].md to prd.json
 ```
 
-The skill will:
-- Convert markdown PRD to JSON format
-- Validate structure (IDs, priorities, acceptance criteria)
-- Save to `prd.json` in project root
+The skill converts the PRD, validates structure, and saves to `prd.json`.
 
-**After conversion, read prd.json and display summary:**
-- Count stories in `userStories` array
-- Count total acceptance criteria across all stories
-- Calculate average criteria per story
-- Display: "✓ PRD converted: [story_count] stories, [total_criteria] criteria (avg [avg_criteria]/story)"
+After conversion, the skill outputs a **dependency graph analysis**. Display it to the user:
+```
+Parallel groups (can run simultaneously):
+- Group 1: US-001 (no deps)
+- Group 2: US-002, US-003 (depend on US-001, independent of each other)
+- Group 3: US-004 (depends on US-002, US-003)
 
-**Checkpoint 6: Execution Settings**
+Suggested teammate count: 2
+```
 
-Create `.claude/sdk-bridge.config.json` configuration if it doesn't exist.
+Read prd.json and display summary: "[story_count] stories, [total_criteria] total criteria"
 
-**First, analyze prd.json to calculate smart defaults:**
+**Checkpoint 6: Configuration**
 
-1. Read `prd.json` and extract:
-   - `story_count` = number of stories in `userStories` array
-   - `total_criteria` = sum of all `acceptanceCriteria` arrays across stories
-   - `avg_criteria` = total_criteria / story_count (rounded to 1 decimal)
+Create `.claude/sdk-bridge.config.json` if it doesn't exist.
 
-2. Calculate iteration options:
-   - `recommended` = ceil(story_count × 2.5) — standard buffer for retries
-   - `comfortable` = ceil(story_count × 3.5) — extra buffer for complex work
-   - `conservative` = ceil(story_count × 5) — maximum safety margin
-   - `minimum` = story_count — absolute minimum (1 per story, no retries)
+**AskUserQuestion — Quality settings (2 questions):**
 
-3. Calculate timeout options based on avg_criteria (complexity proxy):
-   - If avg_criteria ≤ 2: `base_timeout` = 30 min (simple stories)
-   - If avg_criteria ≤ 4: `base_timeout` = 45 min (standard stories)
-   - If avg_criteria ≤ 6: `base_timeout` = 60 min (complex stories)
-   - If avg_criteria > 6: `base_timeout` = 90 min (very complex stories)
-
-   Then calculate options:
-   - `quick` = base_timeout (may timeout on harder stories)
-   - `recommended` = base_timeout + 15 min (buffer for exploration)
-   - `generous` = base_timeout + 30 min (extra time for difficult work)
-   - `maximum` = 120 min (2 hours, prevents runaway)
-
-Use AskUserQuestion to collect settings. Use two calls — first for execution settings (4 questions), then for quality settings (2 questions):
-
-**AskUserQuestion call 1 — Execution settings (4 questions in one call):**
-
-Question 1: "You have [story_count] stories. How many iterations?"
-- Header: "Iterations"
-- multiSelect: false
+Question 1: "Does your project have test, build, or typecheck commands?"
+- Header: "Quality Commands"
 - Options:
-  - Label: "[recommended] iterations" | Description: "Recommended (2.5× stories) - handles typical retries"
-  - Label: "[comfortable] iterations" | Description: "Comfortable (3.5× stories) - extra buffer for complex work"
-  - Label: "[conservative] iterations" | Description: "Conservative (5× stories) - maximum safety margin"
-  - Label: "[minimum] iterations" | Description: "Minimum (1× stories) - no retry buffer, optimistic"
+  - "Auto-detect" → search package.json, Makefile, pyproject.toml for test/build/typecheck scripts
+  - "I'll specify" → ask conversationally for test_command, build_command, typecheck_command
+  - "Skip" → no quality commands
 
-Question 2: "Stories avg [avg_criteria] criteria each. Timeout per iteration?"
-- Header: "Timeout"
-- multiSelect: false
+Question 2: "Enable code review after all stories complete? (Catches bugs and architecture issues)"
+- Header: "Code Review"
 - Options:
-  - Label: "[quick] minutes" | Description: "Quick ([base_timeout] base) - may timeout on harder stories"
-  - Label: "[recommended] minutes" | Description: "Recommended ([base_timeout]+15) - buffer for exploration"
-  - Label: "[generous] minutes" | Description: "Generous ([base_timeout]+30) - extra time for difficult work"
-  - Label: "120 minutes" | Description: "Maximum (2 hours) - prevents runaway"
+  - "Yes (Recommended)"
+  - "No"
 
-Question 3: "How do you want to run SDK Bridge?"
-- Header: "Mode"
-- multiSelect: false
-- Options:
-  - Label: "Foreground" | Description: "See live output as Claude works (blocks terminal)"
-  - Label: "Background" | Description: "Continue working while it runs (check .claude/sdk-bridge.log)"
-
-Question 4: "Which model and effort level for story implementation?"
-- Header: "Model"
-- multiSelect: false
-- Options:
-  - Label: "Sonnet 4.5" | Description: "Fast and efficient - good for most tasks (recommended)"
-  - Label: "Opus 4.6 (high effort)" | Description: "Best quality - adaptive reasoning, #1 SWE-bench, 128K output (default effort)"
-  - Label: "Opus 4.6 (medium effort)" | Description: "Opus quality at 76% fewer tokens - matches Sonnet speed, better reasoning"
-
-**AskUserQuestion call 2 — Quality settings (2 questions):**
-
-Question 1: "Does your project have test, build, or typecheck commands? (Used for validation after each story)"
-- Header: "Quality"
-- multiSelect: false
-- Options:
-  - Label: "Auto-detect" | Description: "SDK-Bridge will look for package.json scripts, Makefile targets, etc."
-  - Label: "I'll specify" | Description: "Enter commands manually (e.g., npm test, tsc --noEmit)"
-  - Label: "Skip" | Description: "No quality commands configured"
-
-If "Auto-detect": Search for:
-- `package.json` → extract `scripts.test`, `scripts.build`, `scripts.typecheck` or `scripts.check`
-- `Makefile` → look for `test`, `build`, `check` targets
-- `pyproject.toml` → look for test commands
-- If found, show what was detected and confirm
-
-If "I'll specify": Ask conversationally for test_command, build_command, typecheck_command (all optional).
-
-Question 2: "Enable code review after each story? (Catches real bugs — recommended)"
-- Header: "Review"
-- multiSelect: false
-- Options:
-  - Label: "Yes (Recommended)" | Description: "Run code-reviewer agent after each story. Catches bugs, security issues, architecture problems."
-  - Label: "No" | Description: "Skip code review for faster execution"
-
-**After collecting all answers, parse values and create JSON config file:**
-
-For iterations (Question 1):
-- "[recommended] iterations" → use the calculated `recommended` value
-- "[comfortable] iterations" → use the calculated `comfortable` value
-- "[conservative] iterations" → use the calculated `conservative` value
-- "[minimum] iterations" → use the calculated `minimum` value
-- Custom input (via "Other") → parse number from string
-
-For timeout: multiply minutes by 60 for seconds.
-For mode: "Foreground" → "foreground", "Background" → "background"
-For model: "Sonnet 4.5" → sonnet, "Opus 4.6 (high effort)" → opus + high, "Opus 4.6 (medium effort)" → opus + medium
-
-Create `.claude/sdk-bridge.config.json` with parsed values:
+**Write config:**
 ```json
 {
-  "max_iterations": 20,
-  "iteration_timeout": 3600,
-  "execution_mode": "foreground",
-  "execution_model": "opus",
-  "effort_level": "high",
+  "max_teammates": 5,
   "branch_prefix": "sdk-bridge",
-  "test_command": "npm test",
-  "build_command": "npm run build",
-  "typecheck_command": "tsc --noEmit",
+  "test_command": "<from user or omit>",
+  "build_command": "<from user or omit>",
+  "typecheck_command": "<from user or omit>",
   "code_review": true
 }
 ```
 
-Only include `test_command`, `build_command`, `typecheck_command` fields if the user provided values (omit empty ones). The `code_review` field defaults to `true`.
+Omit empty command fields.
 
-Example (8 stories, avg 4 criteria, Node.js project):
+## Orchestration Phase
+
+After all checkpoints pass, you become the **team lead**. Execute:
+
+### Step 1: Create Feature Branch
+
+```bash
+git checkout -b [branchName from prd.json]
+```
+
+### Step 2: Analyze Dependency Graph
+
+Read `prd.json`. Identify:
+- Stories with no `depends_on` → can start immediately (Group 1)
+- Stories whose `depends_on` are all in Group 1 → Group 2
+- Continue grouping until all stories placed
+- `max_parallelism` = size of largest group
+
+### Step 3: Create Tasks
+
+For each story in prd.json, use `TaskCreate` to create a task:
+- Title: `[US-XXX]: [story title]`
+- Description: Story description + acceptance criteria (formatted as a list)
+- Set `blockedBy` for stories with `depends_on`
+
+### Step 4: Calculate Teammate Count
+
+```
+teammate_count = min(max_teammates from config, max_parallelism)
+```
+
+### Step 5: Spawn Implementer Teammates
+
+Use Agent tool to create an agent team:
+
+```
+Create an agent team with [teammate_count] implementer teammates.
+Each teammate should:
+1. Use TaskList to find unclaimed tasks (status: not_started, no blocked dependencies)
+2. Use TaskUpdate to claim a task (set to in_progress)
+3. Implement the story with TDD discipline
+4. Commit changes
+5. Append to progress.jsonl
+6. Use TaskUpdate to mark task completed
+7. Repeat from step 1 until no unclaimed tasks remain
+```
+
+Teammates share the filesystem and task list. They coordinate via TaskCreate/TaskUpdate.
+
+### Step 6: Monitor Progress
+
+Periodically check `TaskList` to see completed vs pending tasks. Wait until all tasks reach `completed` status.
+
+If a teammate appears stuck (in_progress for too long with no progress), check progress.jsonl for recent activity and send a message to that teammate.
+
+### Step 7: Post-Completion Review
+
+When ALL tasks are completed:
+
+1. **Spawn reviewer subagent** on full diff:
+   ```
+   Use the reviewer agent to review the full feature branch: [branchName]
+   Review all [N] stories in prd.json against the complete git diff.
+   ```
+
+2. **If `code_review: true` in config and reviewer approves:**
+   ```
+   Use the code-reviewer agent to review the full feature branch: [branchName]
+   ```
+
+3. **Report results** to user
+
+### Step 8: Update prd.json
+
+Mark all completed stories as `passes: true`:
+```bash
+jq '.userStories = [.userStories[] | .passes = true]' prd.json > prd.json.tmp && mv prd.json.tmp prd.json
+```
+
+### Step 9: Append to progress.jsonl
+
 ```json
-{
-  "max_iterations": 20,
-  "iteration_timeout": 3600,
-  "execution_mode": "foreground",
-  "execution_model": "opus",
-  "effort_level": "high",
-  "branch_prefix": "sdk-bridge",
-  "test_command": "npm test",
-  "typecheck_command": "tsc --noEmit",
-  "code_review": true
-}
+{"timestamp":"<ISO>","event":"run_complete","stories_total":<N>,"stories_completed":<N>,"branch":"<branch>"}
 ```
 
-**Checkpoint 7: Launch**
+### Step 10: Summary
 
-Show user what will happen:
-"Starting SDK Bridge with [max_iterations] iterations in [mode] mode..."
-
-If **foreground mode**:
-```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/sdk-bridge.sh [max_iterations]
-```
-
-User sees live output. Loop continues until:
-- All stories complete (outputs `<promise>COMPLETE</promise>`)
-- Max iterations reached
-- User presses Ctrl+C
-
-If **background mode**:
-```bash
-mkdir -p .claude
-nohup bash ${CLAUDE_PLUGIN_ROOT}/scripts/sdk-bridge.sh [max_iterations] > .claude/sdk-bridge.log 2>&1 &
-echo $! > .claude/sdk-bridge.pid
-```
-
-Then tell user:
-"SDK Bridge running in background (PID: [pid])"
-"View logs: tail -f .claude/sdk-bridge.log"
-"Check status: ps -p [pid]"
+Report to user:
+- Stories completed: N/N
+- Reviewer verdict: approve/request_changes/reject
+- Code review verdict: approve/request_changes (if enabled)
+- Branch: [branchName] — ready to merge or push
 
 ## Error Handling
 
-- If prd.json already exists, warn user: "Found existing prd.json. This will be archived when you run SDK Bridge."
-- If tasks/ directory doesn't exist, create it
-- If claude or jq not found and user declines install, exit gracefully with install instructions
-- If skill loading fails, show helpful error message
-
-## Success Output
-
-When complete (foreground mode):
-"SDK Bridge completed [X] iterations"
-"Completed stories: [count]"
-"Check prd.json for status"
-"Review progress.txt for learnings"
-
-When launched (background mode):
-"SDK Bridge launched in background"
-"Monitor with: tail -f .claude/sdk-bridge.log"
-"Or check prd.json for completion status"
+- If prd.json already exists with a different branchName: warn user and ask to archive or overwrite
+- If tasks/ directory doesn't exist: create it
+- If a teammate gets stuck in a loop: message it with specific guidance from progress.jsonl patterns
+- If reviewer rejects: report issues clearly and ask user how to proceed
+- If validation fails in TaskCompleted hook: the hook returns exit 2 with feedback — the teammate will fix and retry automatically
 
 ## Important Notes
 
-- Use TodoWrite to track progress through checkpoints
-- Keep user informed at each step
-- Validate all file paths before operations
-- Use ${CLAUDE_PLUGIN_ROOT} for script paths
-- Handle both success and error cases gracefully
+- The orchestration loop (Steps 1-10) runs inline — you are the team lead, not a script
+- Teammates run in parallel via Agent Teams — they share the filesystem
+- Do NOT use the bash loop from v6 (`sdk-bridge.sh`) — it no longer exists
+- Agent Teams requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
