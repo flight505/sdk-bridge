@@ -2,7 +2,7 @@
 
 ![SDK Bridge Hero](./assets/sdk-bridge-hero.jpg)
 
-[![Version](https://img.shields.io/badge/version-7.0.0-blue.svg)](https://github.com/flight505/sdk-bridge)
+[![Version](https://img.shields.io/badge/version-7.1.0-blue.svg)](https://github.com/flight505/sdk-bridge)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)](https://github.com/anthropics/claude-code)
 
@@ -60,6 +60,18 @@ Done: prd.json marked complete · progress.jsonl updated · report
 | `jq` | Any | `brew install jq` (macOS) or `apt install jq` |
 | Git | Any | Required for branch management |
 
+**Permissions:** For autonomous execution (no permission prompts), start Claude Code with one of:
+
+```bash
+# Team/Enterprise plans — safer, uses background classifier
+claude --permission-mode auto
+
+# Max/Pro plans — skips all permission checks
+claude --dangerously-skip-permissions
+```
+
+Without either, teammates inherit your default permission mode and will prompt for every file edit, bash command, and git operation. The `permissionMode` declared in agent frontmatter is overridden for Agent Teams teammates. Auto mode requires Team/Enterprise plan + Sonnet 4.6 or Opus 4.6.
+
 **Authentication (choose one):**
 
 ```bash
@@ -110,7 +122,7 @@ The wizard walks you through 5 checkpoints (dependency check → PRD generation 
 | Commands | 1 | `/sdk-bridge:start` — interactive wizard + team lead |
 | Skills | 2 | PRD generator, PRD converter (with dependency graph) |
 | Agents | 3 | implementer (teammate), reviewer, code-reviewer |
-| Hooks | 4 | `TaskCompleted`, `TeammateIdle`, `SessionStart`, `PreCompact` |
+| Hooks | 5 | `TaskCreated`, `TaskCompleted`, `TeammateIdle`, `SessionStart`, `PreCompact` |
 
 ### Agents
 
@@ -134,6 +146,7 @@ The wizard walks you through 5 checkpoints (dependency check → PRD generation 
 
 | Hook | Event | Behaviour |
 |------|-------|-----------|
+| `validate-task-name.sh` | `TaskCreated` | Validates task subjects follow `[US-XXX]:` format; exit 2 blocks creation |
 | `validate-task.sh` | `TaskCompleted` | Runs `test_command`, `build_command`, `typecheck_command`; exit 2 sends feedback back to teammate |
 | `check-idle.sh` | `TeammateIdle` | Checks `prd.json` for incomplete stories; exit 2 keeps teammate working |
 | `inject-context.sh` | `SessionStart` | Injects PRD progress summary into session context |
@@ -237,6 +250,22 @@ Incomplete stories:
 
 To resume: run /sdk-bridge:start — it will detect the existing prd.json and continue.
 ```
+
+---
+
+## Monitoring
+
+SDK Bridge offers to set up `/loop` monitoring automatically after spawning teammates. You can also set it up manually:
+
+```bash
+# Automatic progress updates every 5 minutes (works in the same session)
+/loop 5m Use TaskList to check SDK Bridge progress and report completed/total stories
+
+# One-time status check (useful outside a session or after a crash)
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/watchdog.sh
+```
+
+`/loop` runs a prompt on a recurring interval within your session. It fires between turns, checks task status, and reports progress without you having to ask. Session-scoped — gone when you exit. Requires Claude Code v2.1.71+. See [Scheduled Tasks](https://code.claude.com/docs/en/scheduled-tasks) for details.
 
 ---
 

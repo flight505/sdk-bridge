@@ -4,6 +4,33 @@ All notable changes to SDK Bridge are documented here.
 
 ---
 
+## [7.1.0] - 2026-03-27
+
+Quality-of-life improvements: resume support, task naming validation, permission transparency, and documentation fixes.
+
+### Added
+- **Resume detection** in `/sdk-bridge:start` — detects existing `prd.json` and offers resume, archive, or fresh start before asking for project input
+- **`TaskCreated` hook** (`hooks/validate-task-name.sh`) — validates task subjects follow `[US-XXX]: Title` format; exit 2 blocks malformed tasks
+- **`effort: high`** on implementer agent — complex TDD implementation benefits from higher reasoning effort
+- **`/loop` progress monitor** in start.md — after spawning teammates, offers to set up automatic `/loop 5m` progress reporting within the session
+- **Monitoring section** in README.md — documents `/loop` as the primary monitoring method, watchdog.sh as fallback for outside sessions
+- **Permissions guidance** in Checkpoint 6 — warns users that teammates inherit the lead's permission mode and suggests `--dangerously-skip-permissions` for autonomous execution
+
+### Fixed
+- **prd.json coordination gap** — implementer no longer reads or modifies prd.json; all story details now included in TaskCreate descriptions; dependency checking uses TaskList `blockedBy` exclusively; only the team lead updates prd.json after all stories complete
+- **`progress.txt` → `progress.jsonl`** in prd-converter archiving section (stale v6 reference)
+- **Duplicate "How to Start"** in code-reviewer.md — removed contradictory second section that used `git diff` instead of `git diff main...HEAD`
+- **Catastrophic failure in `validate-task.sh`** — missing config file now returns `{"continue": false}` to stop the teammate instead of silently passing validation
+
+### Removed
+- **`sdk-bridge-evaluation.md`** — stale v5/v6 evaluation document that described removed architecture (bash loop, worktree isolation, failure-analyzer skill, architect/merger agents)
+
+### Documentation
+- **CLAUDE.md** — added `permissionMode` limitation gotcha, updated hooks table to 5 events, version bump
+- **README.md** — added permissions prerequisite, monitoring section, updated version badge and hooks count
+
+---
+
 ## [7.0.0] - 2026-03-17
 
 Complete architectural rewrite: replaces the bash orchestration loop with native Claude Code Agent Teams for parallel story execution.

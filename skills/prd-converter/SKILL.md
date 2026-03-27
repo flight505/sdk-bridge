@@ -395,10 +395,10 @@ Add ability to mark tasks with different statuses.
 
 1. Read the current `prd.json` if it exists
 2. Check if `branchName` differs from the new feature's branch name
-3. If different AND `progress.txt` has content beyond the header:
+3. If different AND `progress.jsonl` exists and is non-empty:
    - Create archive folder: `archive/YYYY-MM-DD-feature-name/`
-   - Copy current `prd.json` and `progress.txt` to archive
-   - Reset `progress.txt` with fresh header
+   - Copy current `prd.json` and `progress.jsonl` to archive
+   - Remove `progress.jsonl` (it will be recreated fresh by implementer teammates)
 
 If you are manually updating prd.json between runs, archive first.
 

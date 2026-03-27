@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Version 7.0.0** | Last Updated: 2026-03-17
+**Version 7.1.0** | Last Updated: 2026-03-27
 
 Developer instructions for the SDK Bridge plugin for Claude Code CLI.
 
@@ -37,7 +37,8 @@ sdk-bridge/
 │   ├── prd-generator/                 # PRD creation with clarifying questions
 │   └── prd-converter/                 # Markdown → JSON + dependency graph
 ├── hooks/
-│   ├── hooks.json                     # 4 hooks across 4 events
+│   ├── hooks.json                     # 5 hooks across 5 events
+│   ├── validate-task-name.sh           # TaskCreated: enforce [US-XXX]: naming
 │   ├── validate-task.sh               # TaskCompleted: test/build/typecheck gate
 │   ├── check-idle.sh                  # TeammateIdle: prevents early shutdown
 │   ├── inject-context.sh              # SessionStart: injects PRD status
@@ -61,6 +62,7 @@ sdk-bridge/
 | Event | Script | Purpose |
 |-------|--------|---------|
 | SessionStart | inject-context.sh | Injects PRD progress into session context |
+| TaskCreated | validate-task-name.sh | Validates task subjects follow [US-XXX]: format |
 | TaskCompleted | validate-task.sh | Runs test/build/typecheck; exit 2 blocks completion |
 | TeammateIdle | check-idle.sh | Prevents teammates from stopping while stories remain |
 | PreCompact | preserve-context.sh | Re-injects current story + patterns before compaction |
@@ -85,11 +87,12 @@ progress.jsonl                 # Learnings log (append-only, JSON lines)
 ```
 /sdk-bridge:start
   → Checkpoint 1: check-deps.sh (claude, jq, CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)
+  → Resume Checkpoint: detect existing prd.json → resume / archive / fresh start
   → Checkpoint 2: User describes project
   → Checkpoint 3: prd-generator skill → tasks/prd-feature.md
   → Checkpoint 4: User reviews and approves PRD
   → Checkpoint 5: prd-converter skill → prd.json + dependency graph
-  → Checkpoint 6: Configure quality commands + code review
+  → Checkpoint 6: Configure quality commands + code review + permissions check
   → Orchestration:
       git checkout -b [branchName]
       TaskCreate for each story
@@ -97,6 +100,7 @@ progress.jsonl                 # Learnings log (append-only, JSON lines)
         teammate: TaskList → claim → implement (TDD) → commit → TaskUpdate(completed)
         validate-task.sh fires on TaskCompleted → test/build/typecheck gate
         check-idle.sh fires on TeammateIdle → blocks if stories remain
+      /loop 5m progress monitor (optional, user choice)
       Wait for all tasks → completed
       Spawn reviewer subagent → full branch diff review
       Spawn code-reviewer subagent (if enabled) → full branch quality review
@@ -188,8 +192,10 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 - Exit 2 messages must go to stderr; stdout is for structured JSON output
 - Implementer runs as a teammate with shared filesystem — no worktree isolation
 - Teammates coordinate via TaskList/TaskUpdate — they do NOT share memory directly
+- **Teammates must NOT read or modify `prd.json`** — only the team lead updates `passes` after all stories complete. Task descriptions contain all story details so implementers don't need prd.json
 - progress.jsonl replaces progress.txt — use JSON lines format for machine-readability
 - Token cost: parallel teammates multiply token usage; `max_teammates` controls this
+- **`permissionMode: bypassPermissions` on implementer is silently ignored for teammates** — per Claude Code docs: "Teammates start with the lead's permission settings." Plugin-shipped agents cannot declare `permissionMode`. For autonomous execution, users must start with `--permission-mode auto` (Team/Enterprise) or `--dangerously-skip-permissions` (Max/Pro)
 
 ---
 

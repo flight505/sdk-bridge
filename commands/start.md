@@ -45,6 +45,37 @@ Add to your ~/.zshrc or ~/.bashrc and restart your terminal, then run /sdk-bridg
 
 Exit if agent-teams is not enabled — SDK Bridge v7 requires it.
 
+**Resume Checkpoint: Detect Existing Run**
+
+Before asking for project input, check for an in-progress run:
+
+1. Check if `prd.json` exists in the current directory
+2. If it does NOT exist: proceed to Checkpoint 2
+
+If `prd.json` exists:
+
+1. Read `prd.json` and extract `project`, `branchName`, and story status
+2. Count completed stories (`passes == true`) vs total
+3. Check if the matching branch exists: `git branch --list [branchName]`
+
+Display status:
+
+```
+SDK Bridge detected an existing run:
+  Project: [project]
+  Branch: [branchName]
+  Progress: [done]/[total] stories complete
+```
+
+Use AskUserQuestion:
+
+Question: "An existing SDK Bridge run was found. How would you like to proceed?"
+- Header: "Resume Detection"
+- Options:
+  - "Resume from where I left off" → read `.claude/sdk-bridge.config.json`, checkout the branch if not already on it, then skip directly to the **Orchestration Phase** — create tasks only for stories where `passes == false`
+  - "Archive and start fresh" → create `archive/YYYY-MM-DD-[feature-name]/`, move `prd.json` and `progress.jsonl` (if exists) there, then proceed to Checkpoint 2
+  - "Delete and start fresh" → remove `prd.json` and `progress.jsonl` (if they exist), then proceed to Checkpoint 2
+
 **Checkpoint 2: Project Input**
 
 Ask: "What would you like to build? Describe your project or provide a file path to an existing spec (e.g., ~/docs/spec.md or ./tasks/plan.md)."
@@ -129,6 +160,31 @@ Question 2: "Enable code review after all stories complete? (Catches bugs and ar
 
 Omit empty command fields.
 
+**Permissions Check:**
+
+SDK Bridge teammates inherit the lead session's permission mode. If the current session is NOT running with `--dangerously-skip-permissions` or `--permission-mode auto`, display:
+
+```
+Teammates will inherit your current permission mode. For autonomous execution
+(no permission prompts), restart with one of:
+
+  Team/Enterprise plans (recommended — safer):
+    claude --permission-mode auto
+
+  Max/Pro plans (or if auto mode is unavailable):
+    claude --dangerously-skip-permissions
+
+Auto mode uses a background classifier to block risky actions while allowing
+routine work. bypassPermissions skips all checks — use only in trusted projects.
+
+Without either, each teammate will prompt for every file edit, bash command,
+and git operation.
+```
+
+Use AskUserQuestion:
+- "Continue — I'll approve permissions as needed"
+- "I understand — let me restart with broader permissions" → exit gracefully so the user can restart
+
 ## Orchestration Phase
 
 After all checkpoints pass, you become the **team lead**. Execute:
@@ -151,8 +207,14 @@ Read `prd.json`. Identify:
 
 For each story in prd.json, use `TaskCreate` to create a task:
 - Title: `[US-XXX]: [story title]`
-- Description: Story description + acceptance criteria (formatted as a list)
+- Description: Include ALL of the following so teammates have everything without reading prd.json:
+  - Story description ("As a..., I want..., so that...")
+  - Acceptance criteria (formatted as a numbered list)
+  - `implementation_hint` (if present)
+  - `check_before_implementing` commands (if present)
 - Set `blockedBy` for stories with `depends_on`
+
+**Important:** Teammates coordinate exclusively via TaskList/TaskUpdate. They do NOT read or modify prd.json — only the team lead updates prd.json in Step 9 after all stories complete.
 
 ### Step 4: Calculate Teammate Count
 
@@ -178,13 +240,25 @@ Each teammate should:
 
 Teammates share the filesystem and task list. They coordinate via TaskCreate/TaskUpdate.
 
-### Step 6: Monitor Progress
+### Step 6: Start Progress Monitor
 
-Periodically check `TaskList` to see completed vs pending tasks. Wait until all tasks reach `completed` status.
+After spawning teammates, use AskUserQuestion:
+
+Question: "Want to enable automatic progress monitoring? (Checks every 5 minutes)"
+- Header: "Progress Monitor"
+- Options:
+  - "Yes — enable /loop monitoring" → set up: `/loop 5m Use TaskList to check SDK Bridge progress and report: completed/total stories, any stuck tasks (in_progress with no recent commits)`
+  - "No — I'll check manually"
+
+Then continue to Step 7, monitoring in the background while teammates work.
+
+### Step 7: Wait for Completion
+
+Wait until all tasks reach `completed` status. The `/loop` monitor (if enabled) will report progress automatically between turns.
 
 If a teammate appears stuck (in_progress for too long with no progress), check progress.jsonl for recent activity and send a message to that teammate.
 
-### Step 7: Post-Completion Review
+### Step 8: Post-Completion Review
 
 When ALL tasks are completed:
 
@@ -201,20 +275,20 @@ When ALL tasks are completed:
 
 3. **Report results** to user
 
-### Step 8: Update prd.json
+### Step 9: Update prd.json
 
 Mark all completed stories as `passes: true`:
 ```bash
 jq '.userStories = [.userStories[] | .passes = true]' prd.json > prd.json.tmp && mv prd.json.tmp prd.json
 ```
 
-### Step 9: Append to progress.jsonl
+### Step 10: Append to progress.jsonl
 
 ```json
 {"timestamp":"<ISO>","event":"run_complete","stories_total":<N>,"stories_completed":<N>,"branch":"<branch>"}
 ```
 
-### Step 10: Summary
+### Step 11: Summary
 
 Report to user:
 - Stories completed: N/N
@@ -224,7 +298,7 @@ Report to user:
 
 ## Error Handling
 
-- If prd.json already exists with a different branchName: warn user and ask to archive or overwrite
+- If prd.json exists: the Resume Checkpoint handles it before Checkpoint 2
 - If tasks/ directory doesn't exist: create it
 - If a teammate gets stuck in a loop: message it with specific guidance from progress.jsonl patterns
 - If reviewer rejects: report issues clearly and ask user how to proceed
@@ -232,7 +306,9 @@ Report to user:
 
 ## Important Notes
 
-- The orchestration loop (Steps 1-10) runs inline — you are the team lead, not a script
+- The orchestration loop (Steps 1-11) runs inline — you are the team lead, not a script
 - Teammates run in parallel via Agent Teams — they share the filesystem
+- Teammates coordinate via TaskList/TaskUpdate only — they do NOT read or modify prd.json
+- Only the team lead updates prd.json (Step 9, after all stories complete)
 - Do NOT use the bash loop from v6 (`sdk-bridge.sh`) — it no longer exists
 - Agent Teams requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`

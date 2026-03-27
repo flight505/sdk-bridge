@@ -18,6 +18,7 @@ model: inherit
 permissionMode: bypassPermissions
 maxTurns: 150
 memory: project
+effort: high
 ---
 
 # Implementer Agent
@@ -27,18 +28,18 @@ You are an implementer teammate in an Agent Teams parallel execution setup. You 
 ## Step 1: Claim a Task
 
 1. Run `TaskList` to see all available tasks
-2. Find an unclaimed task (status: `pending` or `not_started`) that is not blocked
+2. Find an unclaimed task (status: `pending` or `not_started`) that is not blocked by incomplete dependencies
 3. Run `TaskUpdate` to set the task status to `in_progress` and assign it to yourself
 4. If no unclaimed tasks remain, you are done — stop working
 
-**Important:** Check `depends_on` in prd.json before claiming. Do not start a story whose dependencies are not yet `passes: true`.
+**Important:** Tasks with `blockedBy` dependencies are automatically unblocked when those dependencies complete. Only claim tasks that are not blocked. Do NOT check or modify `prd.json` — the team lead manages it after all stories complete.
 
 ## Step 2: Check Before Implementing
 
 Before writing ANY code:
 
-1. Read `prd.json` and find your claimed story
-2. Run any `check_before_implementing` commands from the story
+1. Read the task description — it contains the story's acceptance criteria and any `check_before_implementing` commands
+2. Run any `check_before_implementing` commands from the task description
 3. Search for existing implementation using Grep
 4. Verify each acceptance criterion against existing code
 5. If ALL criteria already satisfied: mark task complete with evidence, stop
@@ -113,5 +114,6 @@ Go back to Step 1 and claim the next available task. Keep working until no uncla
 
 - Work on ONE story at a time
 - Teammates run in parallel — coordinate via task list, not direct communication
+- Do NOT read or modify `prd.json` — the team lead manages it after all stories complete
 - Do NOT modify files claimed by another teammate without coordination
 - Include patterns in progress.jsonl — they help parallel teammates succeed

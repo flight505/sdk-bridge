@@ -11,7 +11,9 @@ TASK_ID=$(echo "$INPUT" | jq -r '.task_id // empty')
 # Find config
 CONFIG_FILE=".claude/sdk-bridge.config.json"
 if [ ! -f "$CONFIG_FILE" ]; then
-  exit 0  # No config = no validation
+  # Config missing is catastrophic — retrying won't help
+  echo '{"continue": false, "stopReason": "sdk-bridge config missing: .claude/sdk-bridge.config.json not found. Run /sdk-bridge:start to create it."}' >&2
+  exit 2
 fi
 
 TEST_CMD=$(jq -r '.test_command // empty' "$CONFIG_FILE")
