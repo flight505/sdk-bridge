@@ -10,7 +10,7 @@ Quality-of-life improvements: resume support, task naming validation, permission
 
 ### Added
 - **Resume detection** in `/sdk-bridge:start` — detects existing `prd.json` and offers resume, archive, or fresh start before asking for project input
-- **`TaskCreated` hook** (`hooks/validate-task-name.sh`) — validates task subjects follow `[US-XXX]: Title` format; script is ready but registration deferred (`TaskCreated` event not yet in hooks schema)
+- **`TaskCreated` hook** (`hooks/validate-task-name.sh`) — validates task subjects follow `[US-XXX]: Title` format; exit 2 blocks malformed tasks (requires Claude Code v2.1.84+)
 - **`effort: high`** on implementer agent — complex TDD implementation benefits from higher reasoning effort
 - **`/loop` progress monitor** in start.md — after spawning teammates, offers to set up automatic `/loop 5m` progress reporting within the session
 - **Monitoring section** in README.md — documents `/loop` as the primary monitoring method, watchdog.sh as fallback for outside sessions

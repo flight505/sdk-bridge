@@ -55,7 +55,7 @@ Done: prd.json marked complete · progress.jsonl updated · report
 
 | Requirement | Version | Install |
 |------------|---------|---------|
-| [Claude Code CLI](https://code.claude.com) | v2.1.32+ | See Claude Code docs |
+| [Claude Code CLI](https://code.claude.com) | v2.1.84+ | See Claude Code docs |
 | Agent Teams | Experimental | `export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` |
 | `jq` | Any | `brew install jq` (macOS) or `apt install jq` |
 | Git | Any | Required for branch management |
@@ -122,7 +122,7 @@ The wizard walks you through 5 checkpoints (dependency check → PRD generation 
 | Commands | 1 | `/sdk-bridge:start` — interactive wizard + team lead |
 | Skills | 2 | PRD generator, PRD converter (with dependency graph) |
 | Agents | 3 | implementer (teammate), reviewer, code-reviewer |
-| Hooks | 4 | `TaskCompleted`, `TeammateIdle`, `SessionStart`, `PreCompact` |
+| Hooks | 5 | `TaskCreated`, `TaskCompleted`, `TeammateIdle`, `SessionStart`, `PreCompact` |
 
 ### Agents
 
@@ -146,6 +146,7 @@ The wizard walks you through 5 checkpoints (dependency check → PRD generation 
 
 | Hook | Event | Behaviour |
 |------|-------|-----------|
+| `validate-task-name.sh` | `TaskCreated` | Validates task subjects follow `[US-XXX]:` format; exit 2 blocks creation (requires v2.1.84+) |
 | `validate-task.sh` | `TaskCompleted` | Runs `test_command`, `build_command`, `typecheck_command`; exit 2 sends feedback back to teammate |
 | `check-idle.sh` | `TeammateIdle` | Checks `prd.json` for incomplete stories; exit 2 keeps teammate working |
 | `inject-context.sh` | `SessionStart` | Injects PRD progress summary into session context |

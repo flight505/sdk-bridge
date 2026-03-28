@@ -37,7 +37,7 @@ sdk-bridge/
 │   ├── prd-generator/                 # PRD creation with clarifying questions
 │   └── prd-converter/                 # Markdown → JSON + dependency graph
 ├── hooks/
-│   ├── hooks.json                     # 4 hooks across 4 events
+│   ├── hooks.json                     # 5 hooks across 5 events
 │   ├── validate-task-name.sh           # TaskCreated: enforce [US-XXX]: naming
 │   ├── validate-task.sh               # TaskCompleted: test/build/typecheck gate
 │   ├── check-idle.sh                  # TeammateIdle: prevents early shutdown
@@ -62,11 +62,12 @@ sdk-bridge/
 | Event | Script | Purpose |
 |-------|--------|---------|
 | SessionStart | inject-context.sh | Injects PRD progress into session context |
+| TaskCreated | validate-task-name.sh | Validates task subjects follow [US-XXX]: format |
 | TaskCompleted | validate-task.sh | Runs test/build/typecheck; exit 2 blocks completion |
 | TeammateIdle | check-idle.sh | Prevents teammates from stopping while stories remain |
 | PreCompact | preserve-context.sh | Re-injects current story + patterns before compaction |
 
-> **Deferred:** `validate-task-name.sh` (TaskCreated hook) is ready but the `TaskCreated` event is not yet recognized by the hooks schema. Will be registered when supported.
+> **Note:** `TaskCreated` requires Claude Code v2.1.84+. On older versions, the plugin will fail to load. Users on <2.1.84 should update Claude Code.
 
 ### State Files (User's Project)
 
