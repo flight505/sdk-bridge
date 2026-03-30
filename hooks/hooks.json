@@ -6,8 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/inject-context.sh",
-            "timeout": 5000
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/inject-context.sh"
           }
         ]
       }
@@ -18,7 +17,7 @@
           {
             "type": "command",
             "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/validate-task-name.sh",
-            "timeout": 5000,
+            "timeout": 5,
             "statusMessage": "Validating task naming..."
           }
         ]
@@ -30,7 +29,7 @@
           {
             "type": "command",
             "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/validate-task.sh",
-            "timeout": 120000,
+            "timeout": 120,
             "statusMessage": "Validating story completion..."
           }
         ]
@@ -42,7 +41,7 @@
           {
             "type": "command",
             "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/check-idle.sh",
-            "timeout": 5000,
+            "timeout": 5,
             "statusMessage": "Checking teammate status..."
           }
         ]
@@ -54,7 +53,7 @@
           {
             "type": "command",
             "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/preserve-context.sh",
-            "timeout": 5000
+            "timeout": 5
           }
         ]
       }

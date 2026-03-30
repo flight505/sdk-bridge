@@ -1,6 +1,6 @@
 {
   "name": "sdk-bridge",
-  "version": "7.1.0",
+  "version": "7.1.1",
   "description": "PRD-driven parallel development — generates PRDs, orchestrates Agent Teams for parallel story implementation with shared task coordination, two-stage review, and TDD enforcement.",
   "author": {
     "name": "Jesper Vang",
